@@ -26,7 +26,7 @@ function App() {
 
   // Cargar tareas al iniciar
   const cargarTareas = async () => {
-    const res = await axios.get("http://localhost:3001/tasks");
+    const res = await axios.get("https://gestion-tareas-ta45.onrender.com/tasks");
     setTareas(res.data);
   };
 
@@ -44,14 +44,14 @@ function App() {
     e.preventDefault();
     if (!form.name.trim()) return;
     if (form.id) {
-      await axios.put(`http://localhost:3001/tasks/${form.id}`, {
+      await axios.put(`https://gestion-tareas-ta45.onrender.com/tasks/${form.id}`, {
         name: form.name,
         duration: form.duration || null,
         periodicity: form.periodicity || null,
         importance: form.importance || null,
       });
     } else {
-      await axios.post("http://localhost:3001/tasks", {
+      await axios.post("https://gestion-tareas-ta45.onrender.com/tasks", {
         name: form.name,
         duration: form.duration || null,
         periodicity: form.periodicity || null,
@@ -75,13 +75,13 @@ function App() {
 
   // Marcar como "al día"
   const marcarAlDia = async (id) => {
-    await axios.post(`http://localhost:3001/tasks/${id}/up-to-date`);
+    await axios.post(`https://gestion-tareas-ta45.onrender.com/tasks/${id}/up-to-date`);
     cargarTareas();
   };
 
   // Refrescar estados (marcar tareas vencidas como pendientes)
   const checkStatus = async () => {
-    await axios.post("http://localhost:3001/tasks/check-status");
+    await axios.post("https://gestion-tareas-ta45.onrender.com/tasks/check-status");
     cargarTareas();
   };
 
