@@ -108,21 +108,22 @@ function App() {
     ));
   }
 
-  // Orden por estado, luego importancia, después periodicidad y duración
+  // Orden por importancia (mayor a menor), duración (mayor a menor), periodicidad (mayor a menor), descripción (A-Z)
   function getSortedTasks(filteredState) {
-    const importanceOrder = { alta: 0, media: 1, baja: 2 };
+    const importanceOrder = { alta: 2, media: 1, baja: 0 };
     return tasks
       .filter(t => t.state === filteredState)
       .sort((a, b) => {
-        // Importancia
-        if (importanceOrder[a.importance] !== importanceOrder[b.importance])
-          return importanceOrder[a.importance] - importanceOrder[b.importance];
-        // Periodicidad
-        if (a.period !== b.period)
-          return a.period - b.period;
-        // Duración
-        if (a.duration !== b.duration)
-          return a.duration - b.duration;
+        // 1. Importancia (mayor a menor)
+        if (importanceOrder[b.importance] !== importanceOrder[a.importance])
+          return importanceOrder[b.importance] - importanceOrder[a.importance];
+        // 2. Duración (mayor a menor)
+        if (b.duration !== a.duration)
+          return b.duration - a.duration;
+        // 3. Periodicidad (mayor a menor)
+        if (b.period !== a.period)
+          return b.period - a.period;
+        // 4. Nombre (alfabético ascendente)
         return a.desc.localeCompare(b.desc);
       });
   }
