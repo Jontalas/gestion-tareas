@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { parseDuration, humanizeDuration } from "./utils/timeUtils";
+import "./App.css";
 
 const IMPORTANCE_LEVELS = [
   { value: "alta", label: "Alta" },
@@ -46,6 +47,20 @@ function App() {
   const [stateFilter, setStateFilter] = useState("pendiente");
   const [, setRefresh] = useState(0); // Para forzar renders periódicos
   const intervalRef = useRef();
+  const [darkMode, setDarkMode] = useState(() =>
+    window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+  );
+
+  // Persistencia modo oscuro/claro
+  useEffect(() => {
+    const localTheme = localStorage.getItem("themeMode");
+    if (localTheme) setDarkMode(localTheme === "dark");
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("themeMode", darkMode ? "dark" : "light");
+    document.documentElement.setAttribute("data-theme", darkMode ? "dark" : "light");
+  }, [darkMode]);
 
   // Cargar tareas desde localStorage al inicio
   useEffect(() => {
@@ -60,7 +75,7 @@ function App() {
 
   // Intervalo para forzar render y actualizar tiempos
   useEffect(() => {
-    intervalRef.current = setInterval(() => setRefresh(x => x + 1), 1000); // actualiza cada segundo
+    intervalRef.current = setInterval(() => setRefresh(x => x + 1), 1000);
     return () => clearInterval(intervalRef.current);
   }, []);
 
@@ -73,13 +88,11 @@ function App() {
           task.lastDone &&
           Date.now() >= task.lastDone + (task.period || 0) * 60 * 1000
         ) {
-          // Pasa a pendiente
           return { ...task, state: "pendiente", lastDone: undefined };
         }
         return task;
       })
     );
-    // Se ejecuta cada segundo por el setRefresh arriba
   }, [tasks, setTasks, setRefresh]);
 
   function resetForm() {
@@ -123,9 +136,7 @@ function App() {
     };
 
     if (editIdx !== null) {
-      // Modificar tarea existente
       const newTasks = tasks.slice();
-      // Mantener lastDone solo si sigue "al día"
       if (newTasks[editIdx].state === "aldia") {
         taskObj.state = "aldia";
         taskObj.lastDone = newTasks[editIdx].lastDone;
@@ -133,7 +144,6 @@ function App() {
       newTasks[editIdx] = { ...newTasks[editIdx], ...taskObj };
       setTasks(newTasks);
     } else {
-      // Añadir nueva tarea
       setTasks([...tasks, taskObj]);
     }
     resetForm();
@@ -167,27 +177,21 @@ function App() {
     ));
   }
 
-  // Orden por importancia (mayor a menor), duración (mayor a menor), periodicidad (mayor a menor), descripción (A-Z)
   function getSortedTasks(filteredState) {
     const importanceOrder = { alta: 2, media: 1, baja: 0 };
     return tasks
       .filter(t => t.state === filteredState)
       .sort((a, b) => {
-        // 1. Importancia (mayor a menor)
         if (importanceOrder[b.importance] !== importanceOrder[a.importance])
           return importanceOrder[b.importance] - importanceOrder[a.importance];
-        // 2. Duración (mayor a menor)
         if (b.duration !== a.duration)
           return b.duration - a.duration;
-        // 3. Periodicidad (mayor a menor)
         if (b.period !== a.period)
           return b.period - a.period;
-        // 4. Nombre (alfabético ascendente)
         return a.desc.localeCompare(b.desc);
       });
   }
 
-  // Convierte minutos a string tipo "30m", "2h", etc. para el formulario de edición
   function reverseParseDuration(minutes) {
     if (minutes % (60 * 24 * 7) === 0)
       return `${minutes / (60 * 24 * 7)}w`;
@@ -199,158 +203,165 @@ function App() {
   }
 
   return (
-    <div style={{ maxWidth: 800, margin: "2em auto", fontFamily: "sans-serif" }}>
-      <div style={{ marginBottom: "1em", background: "#eef", padding: "1em", borderRadius: "8px" }}>
-        <strong>¡Bienvenido!</strong> <br />
-        Puedes introducir <b>duración</b> y <b>periodicidad</b> usando estos formatos:
-        <ul>
-          <li><b>m</b> para minutos (ej: <code>30m</code>)</li>
-          <li><b>h</b> para horas (ej: <code>2h</code>)</li>
-          <li><b>d</b> para días (ej: <code>1d</code>)</li>
-          <li><b>w</b> para semanas (ej: <code>1w</code>)</li>
-        </ul>
-      </div>
-
-      <form onSubmit={handleAddOrEditTask} style={{ marginBottom: "2em", background: "#f8f9fa", padding: "1em", borderRadius: "8px" }}>
-        <div>
-          <label>Descripción:{" "}
-            <input
-              type="text"
-              value={desc}
-              onChange={e => setDesc(e.target.value)}
-              required
-              style={{ width: "60%" }}
-            />
-          </label>
-        </div>
-        <div>
-          <label>Duración:{" "}
-            <input
-              type="text"
-              value={duration}
-              onChange={e => setDuration(e.target.value)}
-              placeholder="ej: 30m, 2h, 1d, 1w"
-              required
-              style={{ width: "120px" }}
-            />
-          </label>
-        </div>
-        <div>
-          <label>Periodicidad:{" "}
-            <input
-              type="text"
-              value={period}
-              onChange={e => setPeriod(e.target.value)}
-              placeholder="ej: 30m, 2h, 1d, 1w"
-              required
-              style={{ width: "120px" }}
-            />
-          </label>
-        </div>
-        <div>
-          <label>Importancia:{" "}
-            <select
-              value={importance}
-              onChange={e => setImportance(e.target.value)}
-              required
-            >
-              {IMPORTANCE_LEVELS.map(opt =>
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              )}
-            </select>
-          </label>
-        </div>
-        {error && <div style={{ color: "red", marginTop: "0.5em" }}>{error}</div>}
-        <button type="submit" style={{ marginTop: "1em" }}>
-          {editIdx !== null ? "Guardar cambios" : "Añadir tarea"}
+    <div className="main-container">
+      <header className="header-bar">
+        <h1 className="logo">
+          <span role="img" aria-label="tarea">📋</span> TaskFlow
+        </h1>
+        <button
+          className="mode-toggle"
+          onClick={() => setDarkMode(m => !m)}
+          aria-label="Cambiar modo claro/oscuro"
+          title={darkMode ? "Modo claro" : "Modo oscuro"}
+        >
+          {darkMode ? "🌙" : "🌞"}
         </button>
-        {editIdx !== null && (
-          <button
-            type="button"
-            style={{ marginLeft: "1em" }}
-            onClick={resetForm}
-          >Cancelar</button>
-        )}
+      </header>
+
+      <section className="intro-card">
+        <strong>¡Bienvenido a TaskFlow!</strong>
+        <p>
+          Gestiona tus tareas recurrentes fácilmente. <br />
+          Usa estos formatos para <b>duración</b> y <b>periodicidad</b>:
+        </p>
+        <ul>
+          <li><b>m</b> para minutos (<code>30m</code>)</li>
+          <li><b>h</b> para horas (<code>2h</code>)</li>
+          <li><b>d</b> para días (<code>1d</code>)</li>
+          <li><b>w</b> para semanas (<code>1w</code>)</li>
+        </ul>
+      </section>
+
+      <form onSubmit={handleAddOrEditTask} className="task-form">
+        <input
+          type="text"
+          value={desc}
+          onChange={e => setDesc(e.target.value)}
+          required
+          placeholder="Descripción de la tarea"
+          className="input"
+        />
+        <input
+          type="text"
+          value={duration}
+          onChange={e => setDuration(e.target.value)}
+          placeholder="Duración (ej: 30m, 2h, 1d, 1w)"
+          required
+          className="input"
+        />
+        <input
+          type="text"
+          value={period}
+          onChange={e => setPeriod(e.target.value)}
+          placeholder="Periodicidad (ej: 30m, 2h, 1d, 1w)"
+          required
+          className="input"
+        />
+        <select
+          value={importance}
+          onChange={e => setImportance(e.target.value)}
+          required
+          className="input"
+        >
+          {IMPORTANCE_LEVELS.map(opt =>
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          )}
+        </select>
+        <div className="form-actions">
+          <button type="submit" className="btn main-btn">
+            {editIdx !== null ? "Guardar" : "Añadir"}
+          </button>
+          {editIdx !== null && (
+            <button
+              type="button"
+              className="btn"
+              onClick={resetForm}
+            >Cancelar</button>
+          )}
+        </div>
+        {error && <div className="error-msg">{error}</div>}
       </form>
 
-      <div>
-        <b>Ver tareas:</b>{" "}
+      <nav className="state-nav">
         {STATES.map(s =>
           <button
             key={s.value}
-            style={{
-              margin: "0 .5em",
-              background: stateFilter === s.value ? "#cde" : "#eee"
-            }}
+            className={`state-btn${stateFilter === s.value ? " active" : ""}`}
             onClick={() => setStateFilter(s.value)}
-          >{s.label}</button>
+          >
+            {s.label}
+          </button>
         )}
-      </div>
+      </nav>
 
-      <h2 style={{ marginTop: "1.5em" }}>
-        {STATES.find(s => s.value === stateFilter)?.label ?? ""}
-      </h2>
-
-      <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "1em" }}>
-        <thead>
-          <tr style={{ background: "#ddd" }}>
-            <th style={{ padding: ".5em", border: "1px solid #bbb" }}>Descripción</th>
-            <th style={{ padding: ".5em", border: "1px solid #bbb" }}>Duración</th>
-            <th style={{ padding: ".5em", border: "1px solid #bbb" }}>Periodicidad</th>
-            <th style={{ padding: ".5em", border: "1px solid #bbb" }}>Importancia</th>
-            {stateFilter === "aldia" && (
-              <th style={{ padding: ".5em", border: "1px solid #bbb" }}>Tiempo restante</th>
-            )}
-            <th style={{ padding: ".5em", border: "1px solid #bbb" }}>Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {getSortedTasks(stateFilter).length === 0 && (
-            <tr>
-              <td colSpan={stateFilter === "aldia" ? 6 : 5} style={{ textAlign: "center", color: "#888" }}>
-                No hay tareas en este estado
-              </td>
-            </tr>
+      <section className="task-list">
+        <h2 className="section-title">{STATES.find(s => s.value === stateFilter)?.label ?? ""}</h2>
+        <div className="tasks-grid">
+          {getSortedTasks(stateFilter).length === 0 ? (
+            <div className="empty-state">No hay tareas en este estado</div>
+          ) : (
+            getSortedTasks(stateFilter).map((task, idx) => {
+              const globalIdx = tasks.findIndex(t =>
+                t.desc === task.desc &&
+                t.duration === task.duration &&
+                t.period === task.period &&
+                t.importance === task.importance &&
+                t.state === task.state &&
+                (t.lastDone ?? 0) === (task.lastDone ?? 0)
+              );
+              return (
+                <article className={`task-card imp-${task.importance}`} key={globalIdx}>
+                  <header className="task-card-head">
+                    <h3 className="task-desc">{task.desc}</h3>
+                  </header>
+                  <ul className="task-meta">
+                    <li>
+                      <span className="meta-label">Duración:</span>
+                      <span className="meta-value">{humanizeDuration(task.duration)}</span>
+                    </li>
+                    <li>
+                      <span className="meta-label">Periodicidad:</span>
+                      <span className="meta-value">{humanizeDuration(task.period)}</span>
+                    </li>
+                    <li>
+                      <span className="meta-label">Importancia:</span>
+                      <span className="meta-value">
+                        <span className={`importance-dot imp-${task.importance}`}></span>
+                        {IMPORTANCE_LEVELS.find(i => i.value === task.importance)?.label}
+                      </span>
+                    </li>
+                    {task.state === "aldia" && (
+                      <li>
+                        <span className="meta-label">Tiempo restante:</span>
+                        <span className={`meta-value time-left${getMsToNextPending(task) <= 0 ? " expired" : ""}`}>
+                          {getHumanTimeLeft(getMsToNextPending(task))}
+                        </span>
+                      </li>
+                    )}
+                  </ul>
+                  <div className="card-actions">
+                    <button className="btn" onClick={() => handleEdit(globalIdx)}>✏️ Editar</button>
+                    <button className="btn" onClick={() => handleDelete(globalIdx)}>🗑️ Eliminar</button>
+                    {task.state === "pendiente" && (
+                      <button className="btn main-btn"
+                        onClick={() => handleStateChange(globalIdx, "aldia")}
+                      >✅ Marcar al día</button>
+                    )}
+                    {task.state === "aldia" && (
+                      <button className="btn warn-btn"
+                        onClick={() => handleStateChange(globalIdx, "pendiente")}
+                      >⏪ Marcar pendiente</button>
+                    )}
+                  </div>
+                </article>
+              );
+            })
           )}
-          {getSortedTasks(stateFilter).map((task, idx) => {
-            const globalIdx = tasks.findIndex(t =>
-              t.desc === task.desc &&
-              t.duration === task.duration &&
-              t.period === task.period &&
-              t.importance === task.importance &&
-              t.state === task.state &&
-              (t.lastDone ?? 0) === (task.lastDone ?? 0)
-            );
-            return (
-              <tr key={globalIdx}>
-                <td style={{ padding: ".5em", border: "1px solid #ccc" }}>{task.desc}</td>
-                <td style={{ padding: ".5em", border: "1px solid #ccc" }}>{humanizeDuration(task.duration)}</td>
-                <td style={{ padding: ".5em", border: "1px solid #ccc" }}>{humanizeDuration(task.period)}</td>
-                <td style={{ padding: ".5em", border: "1px solid #ccc", textTransform: "capitalize" }}>{task.importance}</td>
-                {stateFilter === "aldia" && (
-                  <td style={{ padding: ".5em", border: "1px solid #ccc" }}>
-                    {getHumanTimeLeft(getMsToNextPending(task))}
-                  </td>
-                )}
-                <td style={{ padding: ".5em", border: "1px solid #ccc" }}>
-                  <button onClick={() => handleEdit(globalIdx)}>Editar</button>
-                  <button style={{ marginLeft: "0.5em" }} onClick={() => handleDelete(globalIdx)}>Eliminar</button>
-                  {task.state === "pendiente" && (
-                    <button style={{ marginLeft: "0.5em" }}
-                      onClick={() => handleStateChange(globalIdx, "aldia")}
-                    >Marcar al día</button>
-                  )}
-                  {task.state === "aldia" && (
-                    <button style={{ marginLeft: "0.5em" }}
-                      onClick={() => handleStateChange(globalIdx, "pendiente")}
-                    >Marcar pendiente</button>
-                  )}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+        </div>
+      </section>
+      <footer className="footer">
+        <span>Hecho con <span role="img" aria-label="corazón">💜</span> por Jontalas</span>
+      </footer>
     </div>
   );
 }

@@ -1,38 +1,337 @@
-.App {
-  text-align: center;
+:root {
+  --color-bg: #f9f8ff;
+  --color-card: #fff;
+  --color-primary: #8e44ad;
+  --color-secondary: #31c7b2;
+  --color-accent: #6c63ff;
+  --color-text: #222;
+  --color-border: #d1d1e0;
+  --color-error: #ea4f4c;
+  --color-shadow: rgba(140, 120, 180, 0.06);
+  --color-footer: #ece9f6;
+  --imp-alta: #e74c3c;
+  --imp-media: #f1c40f;
+  --imp-baja: #2ecc71;
+  --main-gradient: linear-gradient(90deg, #a18cd1 0%, #fbc2eb 100%);
+  --card-gradient: linear-gradient(120deg, #e0c3fc 0%, #8ec5fc 100%);
+  --btn-gradient: linear-gradient(90deg, #6c63ff 30%, #31c7b2 100%);
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+[data-theme="dark"] {
+  --color-bg: #181828;
+  --color-card: #23233a;
+  --color-primary: #b388ff;
+  --color-secondary: #00e6d0;
+  --color-accent: #b388ff;
+  --color-text: #f4f3fa;
+  --color-border: #39395c;
+  --color-error: #ff7675;
+  --color-shadow: rgba(140, 120, 180, 0.12);
+  --color-footer: #23233a;
+  --main-gradient: linear-gradient(90deg, #41295a 0%, #2f0743 100%);
+  --card-gradient: linear-gradient(120deg, #23233a 0%, #24243e 100%);
+  --btn-gradient: linear-gradient(90deg, #6c63ff 30%, #00e6d0 100%);
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
+html, body {
+  min-height: 100%;
+  background: var(--main-gradient);
+}
+body {
+  margin: 0;
+  font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+  background: var(--color-bg);
+  color: var(--color-text);
+  transition: background 0.5s, color 0.5s;
 }
 
-.App-header {
-  background-color: #282c34;
+.main-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 1.5rem 2rem 1.5rem;
+  background: var(--color-bg);
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+}
+
+.header-bar {
+  display: flex;
+  justify-content: space-between;
   align-items: center;
+  padding: 2.5rem 0 1.2rem 0;
+  background: transparent;
+}
+.logo {
+  font-size: 2.2rem;
+  font-weight: 700;
+  letter-spacing: -1px;
+  color: var(--color-primary);
+  margin: 0;
+  text-shadow: 0 1px 0 var(--color-card);
+}
+.mode-toggle {
+  background: var(--color-card);
+  border: none;
+  border-radius: 50%;
+  width: 2.9rem;
+  height: 2.9rem;
+  font-size: 1.5rem;
+  cursor: pointer;
+  box-shadow: 0 2px 12px var(--color-shadow);
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+  color: var(--color-accent);
+  outline: none;
+}
+.mode-toggle:hover, .mode-toggle:focus {
+  background: var(--color-accent);
+  color: #fff;
+}
+
+.intro-card {
+  background: var(--card-gradient);
+  border-radius: 1.2rem;
+  box-shadow: 0 2px 12px var(--color-shadow);
+  padding: 1.5rem 2rem 1rem 2rem;
+  margin-bottom: 2rem;
+  color: var(--color-text);
+  font-size: 1.12rem;
+  line-height: 1.7;
+}
+.intro-card strong {
+  font-size: 1.24rem;
+  color: var(--color-primary);
+}
+
+.task-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  background: var(--color-card);
+  border-radius: 1.2rem;
+  box-shadow: 0 2px 12px var(--color-shadow);
+  padding: 1.2rem 1.5rem 1rem 1.5rem;
+  align-items: flex-end;
+  margin-bottom: 1.5rem;
+}
+
+.input {
+  flex: 1 1 160px;
+  padding: 0.7em 1em;
+  border-radius: 0.7em;
+  border: 1.5px solid var(--color-border);
+  font-size: 1rem;
+  margin-bottom: 0.5em;
+  background: var(--color-bg);
+  color: var(--color-text);
+  transition: border 0.2s;
+}
+.input:focus {
+  border-color: var(--color-primary);
+  outline: none;
+}
+
+.form-actions {
+  display: flex;
+  gap: .5rem;
+  align-items: center;
+  margin-bottom: 0.5em;
+}
+
+.btn {
+  background: var(--btn-gradient);
+  color: #fff;
+  border: none;
+  border-radius: 0.6em;
+  padding: 0.6em 1.2em;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  margin-top: 0.2em;
+  margin-bottom: 0.2em;
+  transition: background 0.2s, box-shadow 0.2s, transform 0.12s;
+  box-shadow: 0 2px 10px var(--color-shadow);
+  outline: none;
+}
+.btn:hover, .btn:focus {
+  filter: brightness(1.13) contrast(1.12);
+  box-shadow: 0 4px 18px var(--color-shadow);
+  transform: scale(1.04);
+}
+.main-btn {
+  background: linear-gradient(90deg, var(--color-primary) 30%, var(--color-secondary) 100%);
+}
+.warn-btn {
+  background: linear-gradient(90deg, #fb6f92 30%, #ffb4a2 100%);
+  color: #fff;
+}
+
+.error-msg {
+  color: var(--color-error);
+  font-weight: 600;
+  margin-top: 0.6em;
+  margin-bottom: 0.2em;
+  margin-left: 2px;
+  width: 100%;
+}
+
+.state-nav {
+  display: flex;
+  gap: 1rem;
+  margin: 1.2rem 0 1.2rem 0;
   justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+}
+.state-btn {
+  background: var(--color-card);
+  color: var(--color-primary);
+  border: 2px solid var(--color-primary);
+  border-radius: 2em;
+  padding: 0.5em 1.4em;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.22s, color 0.22s, border 0.22s;
+}
+.state-btn.active, .state-btn:hover, .state-btn:focus {
+  background: var(--color-primary);
+  color: #fff;
 }
 
-.App-link {
-  color: #61dafb;
+.section-title {
+  margin: 0.5em 0 1.1em 0.3em;
+  color: var(--color-primary);
+  font-size: 1.35rem;
+  font-weight: bold;
+  letter-spacing: -.5px;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.task-list {
+  flex: 1 1 auto;
+  width: 100%;
+  margin-bottom: 2.5rem;
+}
+.tasks-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.task-card {
+  flex: 1 1 min(320px, 100%);
+  min-width: 270px;
+  max-width: 390px;
+  background: var(--color-card);
+  border-radius: 1.3em;
+  box-shadow: 0 2px 14px var(--color-shadow);
+  padding: 1.1em 1.2em 1em 1.2em;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border-top: 7px solid var(--color-accent);
+  position: relative;
+  transition: box-shadow .2s, border-top .2s;
+  margin: 0 auto;
+}
+.task-card.imp-alta { border-top-color: var(--imp-alta);}
+.task-card.imp-media { border-top-color: var(--imp-media);}
+.task-card.imp-baja { border-top-color: var(--imp-baja);}
+.task-card-head {
+  margin-bottom: 0.7em;
+}
+.task-desc {
+  font-size: 1.14rem;
+  font-weight: 700;
+  color: var(--color-accent);
+  margin: 0 0 0.1em 0;
+  word-break: break-word;
+}
+.task-meta {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1em 0;
+  font-size: 0.97rem;
+}
+.task-meta li {
+  margin-bottom: 0.22em;
+  display: flex;
+  gap: .55em;
+  align-items: center;
+}
+.meta-label {
+  color: var(--color-primary);
+  font-weight: 500;
+}
+.meta-value {
+  color: var(--color-text);
+  font-weight: 400;
+  margin-left: .2em;
+  display: flex;
+  align-items: center;
+  gap: 0.3em;
+}
+.importance-dot {
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  border-radius: 50%;
+  margin-right: 0.17em;
+  vertical-align: middle;
+  box-shadow: 0 1px 3px rgba(0,0,0,.08);
+}
+.imp-alta { background: var(--imp-alta);}
+.imp-media { background: var(--imp-media);}
+.imp-baja { background: var(--imp-baja);}
+.time-left.expired {
+  color: var(--color-error);
+  font-weight: 600;
+  animation: blink 0.9s steps(2, start) infinite;
+}
+@keyframes blink { to { visibility: hidden; } }
+
+.card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5em;
+  margin-top: 0.6em;
+  justify-content: flex-end;
+}
+
+.empty-state {
+  width: 100%;
+  text-align: center;
+  color: #aaa;
+  font-size: 1.19rem;
+  font-weight: 500;
+  padding: 2.1em;
+  border-radius: 1.1em;
+  background: var(--color-card);
+  box-shadow: 0 2px 8px var(--color-shadow);
+  margin-top: 1em;
+}
+
+.footer {
+  text-align: center;
+  font-size: 1.05rem;
+  color: var(--color-accent);
+  background: var(--color-footer);
+  padding: 1.7em 0 1em 0;
+  border-radius: 1.3em 1.3em 0 0;
+  margin-top: auto;
+}
+
+@media (max-width: 900px) {
+  .main-container { padding: 0 0.5rem 2rem 0.5rem; }
+  .tasks-grid { gap: 1rem;}
+}
+@media (max-width: 650px) {
+  .task-card, .tasks-grid { min-width: 100% !important; max-width: 100% !important; }
+  .task-form { flex-direction: column; gap: 0.7rem;}
+  .header-bar { flex-direction: column; gap: 0.7rem;}
+  .intro-card { padding: 1rem 1em 0.7em 1em;}
+}
+@media (max-width: 470px) {
+  .main-container { padding: 0 .1rem 1.1rem .1rem;}
+  .intro-card, .task-form { padding-left: 0.7em; padding-right: 0.7em;}
+  .footer { font-size: 0.9rem;}
 }
