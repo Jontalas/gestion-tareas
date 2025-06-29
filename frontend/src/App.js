@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { parseDuration, humanizeDuration } from "./utils/timeUtils";
 
-// Para importancia, 3 niveles: Alta, Media, Baja
 const IMPORTANCE_LEVELS = [
   { value: "alta", label: "Alta" },
   { value: "media", label: "Media" },
@@ -14,6 +13,28 @@ const STATES = [
   { value: "aldia", label: "Al día" }
 ];
 
+// Devuelve la diferencia en milisegundos entre ahora y lastDone+period (en minutos)
+function getMsToNextPending(task) {
+  if (!task.lastDone || task.state !== "aldia") return 0;
+  const msPeriod = (task.period || 0) * 60 * 1000;
+  const msLeft = task.lastDone + msPeriod - Date.now();
+  return msLeft;
+}
+
+// Devuelve string tipo "1h 30m" o "¡Pendiente!"
+function getHumanTimeLeft(msLeft) {
+  if (msLeft <= 0) return "¡Pendiente!";
+  const totalSec = Math.floor(msLeft / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  let str = '';
+  if (h > 0) str += `${h}h `;
+  if (m > 0 || (h > 0 && s > 0)) str += `${m}m `;
+  if (h === 0 && m === 0) str += `${s}s`;
+  return str.trim();
+}
+
 function App() {
   const [tasks, setTasks] = useState([]);
   const [desc, setDesc] = useState("");
@@ -23,6 +44,8 @@ function App() {
   const [editIdx, setEditIdx] = useState(null);
   const [error, setError] = useState("");
   const [stateFilter, setStateFilter] = useState("pendiente");
+  const [, setRefresh] = useState(0); // Para forzar renders periódicos
+  const intervalRef = useRef();
 
   // Cargar tareas desde localStorage al inicio
   useEffect(() => {
@@ -34,6 +57,30 @@ function App() {
   useEffect(() => {
     localStorage.setItem("tasks", JSON.stringify(tasks));
   }, [tasks]);
+
+  // Intervalo para forzar render y actualizar tiempos
+  useEffect(() => {
+    intervalRef.current = setInterval(() => setRefresh(x => x + 1), 1000); // actualiza cada segundo
+    return () => clearInterval(intervalRef.current);
+  }, []);
+
+  // Efecto para pasar tareas automáticamente a pendiente cuando vencen
+  useEffect(() => {
+    setTasks(prevTasks =>
+      prevTasks.map(task => {
+        if (
+          task.state === "aldia" &&
+          task.lastDone &&
+          Date.now() >= task.lastDone + (task.period || 0) * 60 * 1000
+        ) {
+          // Pasa a pendiente
+          return { ...task, state: "pendiente", lastDone: undefined };
+        }
+        return task;
+      })
+    );
+    // Se ejecuta cada segundo por el setRefresh arriba
+  }, [tasks, setTasks, setRefresh]);
 
   function resetForm() {
     setDesc("");
@@ -72,11 +119,17 @@ function App() {
       period: periodMinutes,
       importance,
       state: defaultState,
+      lastDone: undefined,
     };
 
     if (editIdx !== null) {
       // Modificar tarea existente
       const newTasks = tasks.slice();
+      // Mantener lastDone solo si sigue "al día"
+      if (newTasks[editIdx].state === "aldia") {
+        taskObj.state = "aldia";
+        taskObj.lastDone = newTasks[editIdx].lastDone;
+      }
       newTasks[editIdx] = { ...newTasks[editIdx], ...taskObj };
       setTasks(newTasks);
     } else {
@@ -104,7 +157,13 @@ function App() {
 
   function handleStateChange(idx, newState) {
     setTasks(tasks.map((t, i) =>
-      i === idx ? { ...t, state: newState } : t
+      i === idx
+        ? {
+            ...t,
+            state: newState,
+            lastDone: newState === "aldia" ? Date.now() : undefined,
+          }
+        : t
     ));
   }
 
@@ -239,25 +298,28 @@ function App() {
             <th style={{ padding: ".5em", border: "1px solid #bbb" }}>Duración</th>
             <th style={{ padding: ".5em", border: "1px solid #bbb" }}>Periodicidad</th>
             <th style={{ padding: ".5em", border: "1px solid #bbb" }}>Importancia</th>
+            {stateFilter === "aldia" && (
+              <th style={{ padding: ".5em", border: "1px solid #bbb" }}>Tiempo restante</th>
+            )}
             <th style={{ padding: ".5em", border: "1px solid #bbb" }}>Acciones</th>
           </tr>
         </thead>
         <tbody>
           {getSortedTasks(stateFilter).length === 0 && (
             <tr>
-              <td colSpan={5} style={{ textAlign: "center", color: "#888" }}>
+              <td colSpan={stateFilter === "aldia" ? 6 : 5} style={{ textAlign: "center", color: "#888" }}>
                 No hay tareas en este estado
               </td>
             </tr>
           )}
           {getSortedTasks(stateFilter).map((task, idx) => {
-            // idx local puede diferir del idx global
             const globalIdx = tasks.findIndex(t =>
               t.desc === task.desc &&
               t.duration === task.duration &&
               t.period === task.period &&
               t.importance === task.importance &&
-              t.state === task.state
+              t.state === task.state &&
+              (t.lastDone ?? 0) === (task.lastDone ?? 0)
             );
             return (
               <tr key={globalIdx}>
@@ -265,6 +327,11 @@ function App() {
                 <td style={{ padding: ".5em", border: "1px solid #ccc" }}>{humanizeDuration(task.duration)}</td>
                 <td style={{ padding: ".5em", border: "1px solid #ccc" }}>{humanizeDuration(task.period)}</td>
                 <td style={{ padding: ".5em", border: "1px solid #ccc", textTransform: "capitalize" }}>{task.importance}</td>
+                {stateFilter === "aldia" && (
+                  <td style={{ padding: ".5em", border: "1px solid #ccc" }}>
+                    {getHumanTimeLeft(getMsToNextPending(task))}
+                  </td>
+                )}
                 <td style={{ padding: ".5em", border: "1px solid #ccc" }}>
                   <button onClick={() => handleEdit(globalIdx)}>Editar</button>
                   <button style={{ marginLeft: "0.5em" }} onClick={() => handleDelete(globalIdx)}>Eliminar</button>
