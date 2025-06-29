@@ -5,16 +5,11 @@ export function parseDuration(str) {
   if (!match) return null;
   const value = parseInt(match[1], 10);
   switch (match[2].toLowerCase()) {
-    case "m":
-      return value;
-    case "h":
-      return value * 60;
-    case "d":
-      return value * 60 * 24;
-    case "w":
-      return value * 60 * 24 * 7;
-    default:
-      return null;
+    case "m": return value;
+    case "h": return value * 60;
+    case "d": return value * 60 * 24;
+    case "w": return value * 60 * 24 * 7;
+    default: return null;
   }
 }
 
