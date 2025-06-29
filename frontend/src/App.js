@@ -1,170 +1,118 @@
-import React, { useEffect, useState } from "react";
-import axios from "axios";
-
-function ordenarTareas(tareas) {
-  // Ordena por importancia desc, duración desc, periodicidad desc, nombre asc
-  return tareas.sort((a, b) => {
-    if ((b.importance || 0) !== (a.importance || 0))
-      return (b.importance || 0) - (a.importance || 0);
-    if ((b.duration || 0) !== (a.duration || 0))
-      return (b.duration || 0) - (a.duration || 0);
-    if ((b.periodicity || 0) !== (a.periodicity || 0))
-      return (b.periodicity || 0) - (a.periodicity || 0);
-    return (a.name || "").localeCompare(b.name || "");
-  });
-}
+import React, { useState } from "react";
+import { parseDuration, humanizeDuration } from "./utils/timeUtils";
 
 function App() {
-  const [tareas, setTareas] = useState([]);
-  const [form, setForm] = useState({
-    id: null,
-    name: "",
-    duration: "",
-    periodicity: "",
-    importance: "",
-  });
+  const [tasks, setTasks] = useState([]);
+  const [desc, setDesc] = useState("");
+  const [duration, setDuration] = useState("");
+  const [period, setPeriod] = useState("");
+  const [error, setError] = useState("");
 
-  // Cargar tareas al iniciar
-  const cargarTareas = async () => {
-    const res = await axios.get("https://gestion-tareas-ta45.onrender.com/tasks");
-    setTareas(res.data);
-  };
-
-  useEffect(() => {
-    cargarTareas();
-  }, []);
-
-  // Manejar cambios en el formulario
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
-  // Crear o actualizar tarea
-  const handleSubmit = async (e) => {
+  const handleAddTask = (e) => {
     e.preventDefault();
-    if (!form.name.trim()) return;
-    if (form.id) {
-      await axios.put(`https://gestion-tareas-ta45.onrender.com/tasks/${form.id}`, {
-        name: form.name,
-        duration: form.duration || null,
-        periodicity: form.periodicity || null,
-        importance: form.importance || null,
-      });
-    } else {
-      await axios.post("https://gestion-tareas-ta45.onrender.com/tasks", {
-        name: form.name,
-        duration: form.duration || null,
-        periodicity: form.periodicity || null,
-        importance: form.importance || null,
-      });
+    const durationMinutes = parseDuration(duration);
+    const periodMinutes = parseDuration(period);
+
+    if (!desc.trim()) {
+      setError("La descripción es obligatoria.");
+      return;
     }
-    setForm({ id: null, name: "", duration: "", periodicity: "", importance: "" });
-    cargarTareas();
-  };
+    if (!durationMinutes) {
+      setError("Duración no válida. Usa 30m, 2h, 1d o 1w.");
+      return;
+    }
+    if (!periodMinutes) {
+      setError("Periodicidad no válida. Usa 30m, 2h, 1d o 1w.");
+      return;
+    }
 
-  // Editar tarea
-  const handleEdit = (tarea) => {
-    setForm({
-      id: tarea.id,
-      name: tarea.name,
-      duration: tarea.duration || "",
-      periodicity: tarea.periodicity || "",
-      importance: tarea.importance || "",
-    });
+    setTasks([
+      ...tasks,
+      { desc, duration: durationMinutes, period: periodMinutes },
+    ]);
+    setDesc("");
+    setDuration("");
+    setPeriod("");
+    setError("");
   };
-
-  // Marcar como "al día"
-  const marcarAlDia = async (id) => {
-    await axios.post(`https://gestion-tareas-ta45.onrender.com/tasks/${id}/up-to-date`);
-    cargarTareas();
-  };
-
-  // Refrescar estados (marcar tareas vencidas como pendientes)
-  const checkStatus = async () => {
-    await axios.post("https://gestion-tareas-ta45.onrender.com/tasks/check-status");
-    cargarTareas();
-  };
-
-  // Dividir tareas
-  const pendientes = ordenarTareas(tareas.filter((t) => t.status !== "up-to-date"));
-  const aldia = ordenarTareas(tareas.filter((t) => t.status === "up-to-date"));
 
   return (
-    <div style={{ maxWidth: 600, margin: "2rem auto", fontFamily: "sans-serif" }}>
-      <h1>Gestión de Tareas Cotidianas</h1>
-      <form onSubmit={handleSubmit} style={{ marginBottom: 20 }}>
-        <input
-          name="name"
-          placeholder="Nombre*"
-          value={form.name}
-          onChange={handleChange}
-          required
-          style={{ width: "40%" }}
-        />
-        <input
-          name="duration"
-          placeholder="Duración (minutos)"
-          value={form.duration}
-          onChange={handleChange}
-          style={{ width: "18%" }}
-        />
-        <input
-          name="periodicity"
-          placeholder="Periodicidad (horas)"
-          value={form.periodicity}
-          onChange={handleChange}
-          style={{ width: "18%" }}
-        />
-        <input
-          name="importance"
-          placeholder="Importancia (1-10)"
-          value={form.importance}
-          onChange={handleChange}
-          style={{ width: "14%" }}
-        />
-        <button type="submit">{form.id ? "Actualizar" : "Agregar"}</button>
-        {form.id && (
-          <button type="button" onClick={() => setForm({ id: null, name: "", duration: "", periodicity: "", importance: "" })}>
-            Cancelar
-          </button>
-        )}
+    <div style={{ maxWidth: 600, margin: "2em auto", fontFamily: "sans-serif" }}>
+      <div style={{ marginBottom: "1em", background: "#eef", padding: "1em", borderRadius: "8px" }}>
+        <strong>¡Bienvenido!</strong> <br />
+        Puedes introducir <b>duración</b> y <b>periodicidad</b> usando estos formatos:<br />
+        <ul>
+          <li><b>m</b> para minutos (ej: <code>30m</code>)</li>
+          <li><b>h</b> para horas (ej: <code>2h</code>)</li>
+          <li><b>d</b> para días (ej: <code>1d</code>)</li>
+          <li><b>w</b> para semanas (ej: <code>1w</code>)</li>
+        </ul>
+      </div>
+
+      <form onSubmit={handleAddTask} style={{ marginBottom: "2em", background: "#f8f9fa", padding: "1em", borderRadius: "8px" }}>
+        <div>
+          <label>Descripción:{" "}
+            <input
+              type="text"
+              value={desc}
+              onChange={e => setDesc(e.target.value)}
+              required
+              style={{ width: "60%" }}
+            />
+          </label>
+        </div>
+        <div>
+          <label>Duración:{" "}
+            <input
+              type="text"
+              value={duration}
+              onChange={e => setDuration(e.target.value)}
+              placeholder="ej: 30m, 2h, 1d, 1w"
+              required
+              style={{ width: "120px" }}
+            />
+          </label>
+        </div>
+        <div>
+          <label>Periodicidad:{" "}
+            <input
+              type="text"
+              value={period}
+              onChange={e => setPeriod(e.target.value)}
+              placeholder="ej: 30m, 2h, 1d, 1w"
+              required
+              style={{ width: "120px" }}
+            />
+          </label>
+        </div>
+        {error && <div style={{ color: "red", marginTop: "0.5em" }}>{error}</div>}
+        <button type="submit" style={{ marginTop: "1em" }}>Añadir tarea</button>
       </form>
 
-      <button onClick={checkStatus} style={{ marginBottom: 20 }}>
-        Refrescar estados de tareas
-      </button>
-
-      <div style={{ display: "flex", gap: 20 }}>
-        <div style={{ flex: 1 }}>
-          <h2>Pendientes</h2>
-          <ul>
-            {pendientes.map((t) => (
-              <li key={t.id} style={{ marginBottom: 10 }}>
-                <b>{t.name}</b>
-                {t.importance && <> | Importancia: {t.importance}</>}
-                {t.duration && <> | Duración: {t.duration} min</>}
-                {t.periodicity && <> | Periodicidad: {t.periodicity} h</>}
-                <button style={{ marginLeft: 10 }} onClick={() => marcarAlDia(t.id)}>Marcar al día</button>
-                <button style={{ marginLeft: 5 }} onClick={() => handleEdit(t)}>Editar</button>
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div style={{ flex: 1 }}>
-          <h2>Al día</h2>
-          <ul>
-            {aldia.map((t) => (
-              <li key={t.id} style={{ marginBottom: 10 }}>
-                <b>{t.name}</b>
-                {t.importance && <> | Importancia: {t.importance}</>}
-                {t.duration && <> | Duración: {t.duration} min</>}
-                {t.periodicity && <> | Periodicidad: {t.periodicity} h</>}
-                <button style={{ marginLeft: 5 }} onClick={() => handleEdit(t)}>Editar</button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
+      <h2>Tareas</h2>
+      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <thead>
+          <tr style={{ background: "#ddd" }}>
+            <th style={{ padding: "0.5em", border: "1px solid #bbb" }}>Descripción</th>
+            <th style={{ padding: "0.5em", border: "1px solid #bbb" }}>Duración</th>
+            <th style={{ padding: "0.5em", border: "1px solid #bbb" }}>Periodicidad</th>
+          </tr>
+        </thead>
+        <tbody>
+          {tasks.length === 0 && (
+            <tr>
+              <td colSpan={3} style={{ textAlign: "center", color: "#888" }}>No hay tareas aún</td>
+            </tr>
+          )}
+          {tasks.map((task, idx) => (
+            <tr key={idx}>
+              <td style={{ padding: "0.5em", border: "1px solid #ccc" }}>{task.desc}</td>
+              <td style={{ padding: "0.5em", border: "1px solid #ccc" }}>{humanizeDuration(task.duration)}</td>
+              <td style={{ padding: "0.5em", border: "1px solid #ccc" }}>{humanizeDuration(task.period)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
