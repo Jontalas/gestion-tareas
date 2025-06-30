@@ -293,6 +293,8 @@ function App() {
   const [draggedId, setDraggedId] = useState(null);
   const [draggedDelta, setDraggedDelta] = useState(0);
   const [swipeClass, setSwipeClass] = useState({}); // id: "swipe-remove" o "swipe-state"
+  // Estado para confirmación de borrado
+  const [pendingDelete, setPendingDelete] = useState(null);
 
   function handleDragStart(e, id) {
     dragInfo.current = {
@@ -327,8 +329,8 @@ function App() {
     if (direction === "left" && Math.abs(deltaX) > threshold) {
       setSwipeClass((prev) => ({ ...prev, [id]: "swipe-remove" }));
       setTimeout(() => {
-        handleDelete(id);
         setSwipeClass((prev) => ({ ...prev, [id]: undefined }));
+        setPendingDelete(id);
       }, 300);
     } else if (direction === "right" && Math.abs(deltaX) > threshold) {
       setSwipeClass((prev) => ({ ...prev, [id]: "swipe-state" }));
@@ -343,6 +345,17 @@ function App() {
     }
     setDraggedId(null);
     setDraggedDelta(0);
+  }
+
+  function handleConfirmDelete() {
+    if (pendingDelete) {
+      handleDelete(pendingDelete);
+      setPendingDelete(null);
+    }
+  }
+
+  function handleCancelDelete() {
+    setPendingDelete(null);
   }
 
   // --- RENDER ---
@@ -586,6 +599,24 @@ function App() {
           )}
         </ul>
       </section>
+
+      {/* Confirmación de borrado al hacer swipe izquierda */}
+      {pendingDelete && (
+        <div className="confirm-modal-backdrop">
+          <div className="confirm-modal">
+            <p>¿Seguro que quieres eliminar esta tarea?</p>
+            <div className="modal-actions">
+              <button className="btn main-btn" onClick={handleConfirmDelete}>
+                Sí, eliminar
+              </button>
+              <button className="btn" onClick={handleCancelDelete}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <footer className="footer">
         <span>
           Hecho con <span role="img" aria-label="corazón">💜</span> por Jontalas
