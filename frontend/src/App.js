@@ -26,7 +26,7 @@ const firebaseConfig = {
   authDomain: "gestion-tareas-5687f.firebaseapp.com",
   databaseURL: "https://gestion-tareas-5687f-default-rtdb.europe-west1.firebasedatabase.app",
   projectId: "gestion-tareas-5687f",
-  storageBucket: "gestion-tareas-5687f.firebasestorage.app",
+  storageBucket: "gestion-tareas-5687f.appspot.com",
   messagingSenderId: "571206795697",
   appId: "1:571206795697:web:cad2b97a38ab0fb875fd90"
 };
@@ -47,19 +47,38 @@ const STATES = [
 ];
 
 function getMsToNextPending(task) {
-  if (!task.lastDone || task.state !== "aldia") return 0;
-  const msPeriod = (task.period || 0) * 60 * 1000;
-  return task.lastDone + msPeriod - Date.now();
+  if (task.state !== "aldia" || !task.lastDone) return 0;
+  const periodMin = task.period || 0;
+  const msNow = Date.now();
+  if (periodMin >= 60 * 24) {
+    // Un día o más
+    const days = Math.ceil(periodMin / (60 * 24));
+    const last = new Date(task.lastDone);
+    last.setHours(0, 0, 0, 0);
+    const nextDue = new Date(last.getTime() + days * 24 * 60 * 60 * 1000);
+    return nextDue.getTime() - msNow;
+  } else {
+    // Menos de un día
+    return task.lastDone + periodMin * 60 * 1000 - msNow;
+  }
 }
+
 function getHumanTimeLeft(msLeft) {
   if (msLeft <= 0) return "¡Pendiente!";
-  const totalSec = Math.floor(msLeft / 1000);
-  const h = Math.floor(totalSec / 3600);
-  const m = Math.floor((totalSec % 3600) / 60);
-  if (h > 0) return `${h}h ${m}m`;
-  if (m > 0) return `${m}m`;
-  return `${totalSec % 60}s`;
+  const sec = Math.round(msLeft / 1000);
+  if (sec < 60) return `${sec}s`;
+  const min = Math.round(sec / 60);
+  if (min < 60) return `${min}m`;
+  const hr = Math.round(min / 60);
+  if (hr < 24) return `${hr}h`;
+  const days = Math.round(hr / 24);
+  if (days < 7) return `${days} días`;
+  const weeks = Math.floor(days / 7);
+  if (weeks < 52) return weeks === 1 ? "1 semana" : `${weeks} semanas`;
+  const years = Math.floor(days / 365);
+  return years === 1 ? "1 año" : `${years} años`;
 }
+
 function getImportanceObj(val) {
   return IMPORTANCE_LEVELS.find((l) => l.value === val) || IMPORTANCE_LEVELS[1];
 }
@@ -157,7 +176,7 @@ function App() {
       if (
         task.state === "aldia" &&
         task.lastDone &&
-        Date.now() >= task.lastDone + (task.period || 0) * 60 * 1000
+        getMsToNextPending(task) <= 0
       ) {
         const key = getUserDbKey(user.email);
         update(ref(db, `tasks/${key}/${task.id}`), {
@@ -239,19 +258,90 @@ function App() {
     return `${minutes}m`;
   }
 
-  // Orden por prioridad
-  const [stateFilter, setStateFilter] = useState("pendiente");
+  // Ordenación avanzada según requisitos
   function getSortedTasks(filteredState) {
     const importanceOrder = { alta: 2, media: 1, baja: 0 };
-    return tasks
-      .filter((t) => t.state === filteredState)
-      .sort((a, b) => {
-        if (importanceOrder[b.importance] !== importanceOrder[a.importance])
-          return importanceOrder[b.importance] - importanceOrder[a.importance];
-        if (b.duration !== a.duration) return b.duration - a.duration;
-        if (b.period !== a.period) return b.period - a.period;
-        return a.desc.localeCompare(b.desc);
-      });
+    if (filteredState === "aldia") {
+      return tasks
+        .filter((t) => t.state === filteredState)
+        .sort((a, b) => {
+          const tlA = getMsToNextPending(a);
+          const tlB = getMsToNextPending(b);
+          if (tlA !== tlB) return tlA - tlB;
+          if (importanceOrder[b.importance] !== importanceOrder[a.importance])
+            return importanceOrder[b.importance] - importanceOrder[a.importance];
+          if (b.duration !== a.duration) return b.duration - a.duration;
+          if (b.period !== a.period) return b.period - a.period;
+          return a.desc.localeCompare(b.desc);
+        });
+    } else {
+      return tasks
+        .filter((t) => t.state === filteredState)
+        .sort((a, b) => {
+          if (importanceOrder[b.importance] !== importanceOrder[a.importance])
+            return importanceOrder[b.importance] - importanceOrder[a.importance];
+          if (b.duration !== a.duration) return b.duration - a.duration;
+          if (b.period !== a.period) return b.period - a.period;
+          return a.desc.localeCompare(b.desc);
+        });
+    }
+  }
+
+  // --- Drag & Drop para swipe (eliminar/cambiar estado) ---
+  const dragInfo = useRef({});
+  const [draggedId, setDraggedId] = useState(null);
+  const [draggedDelta, setDraggedDelta] = useState(0);
+  const [swipeClass, setSwipeClass] = useState({}); // id: "swipe-remove" o "swipe-state"
+
+  function handleDragStart(e, id) {
+    dragInfo.current = {
+      id,
+      startX: e.type === "touchstart" ? e.touches[0].clientX : e.clientX,
+      dragging: true,
+      direction: null,
+      deltaX: 0,
+    };
+    setDraggedId(id);
+    setDraggedDelta(0);
+  }
+
+  function handleDragMove(e) {
+    if (!dragInfo.current.dragging) return;
+    const currentX = e.type === "touchmove" ? e.touches[0].clientX : e.clientX;
+    const deltaX = currentX - dragInfo.current.startX;
+    dragInfo.current.deltaX = deltaX;
+    dragInfo.current.direction = deltaX > 0 ? "right" : "left";
+    setDraggedDelta(deltaX);
+  }
+
+  function handleDragEnd(e, task, isPendingList) {
+    if (!dragInfo.current.dragging) {
+      setDraggedId(null);
+      setDraggedDelta(0);
+      return;
+    }
+    const { deltaX, direction, id } = dragInfo.current;
+    dragInfo.current = {};
+    const threshold = 60;
+    if (direction === "left" && Math.abs(deltaX) > threshold) {
+      setSwipeClass((prev) => ({ ...prev, [id]: "swipe-remove" }));
+      setTimeout(() => {
+        handleDelete(id);
+        setSwipeClass((prev) => ({ ...prev, [id]: undefined }));
+      }, 300);
+    } else if (direction === "right" && Math.abs(deltaX) > threshold) {
+      setSwipeClass((prev) => ({ ...prev, [id]: "swipe-state" }));
+      setTimeout(() => {
+        if (isPendingList) {
+          handleStateChange(id, "aldia");
+        } else {
+          handleStateChange(id, "pendiente");
+        }
+        setSwipeClass((prev) => ({ ...prev, [id]: undefined }));
+      }, 300);
+    }
+    setDraggedId(null);
+    setDraggedDelta(0);
   }
 
   // --- RENDER ---
@@ -420,14 +510,34 @@ function App() {
           ) : (
             getSortedTasks(stateFilter).map((task) => {
               const importanceObj = getImportanceObj(task.importance);
+              const msLeft = getMsToNextPending(task);
+              const isDragged = draggedId === task.id;
+              const extraClass = [
+                isDragged ? "swiping" : "",
+                swipeClass[task.id] || "",
+              ]
+                .filter(Boolean)
+                .join(" ");
+              // Swipe: isPendingList es true si estamos en la lista de pendientes
               return (
                 <li
-                  className={`task-li imp-${task.importance}`}
+                  className={`task-li imp-${task.importance} ${extraClass}`}
                   key={task.id}
                   style={{
                     borderLeftColor: importanceObj.color,
                     background: `var(--bg-imp-${task.importance})`,
+                    touchAction: "pan-y",
+                    transform:
+                      isDragged && draggedDelta !== 0
+                        ? `translateX(${draggedDelta}px)`
+                        : undefined,
                   }}
+                  onTouchStart={e => handleDragStart(e, task.id)}
+                  onTouchMove={handleDragMove}
+                  onTouchEnd={e => handleDragEnd(e, task, stateFilter === "pendiente")}
+                  onMouseDown={e => handleDragStart(e, task.id)}
+                  onMouseMove={e => isDragged && handleDragMove(e)}
+                  onMouseUp={e => handleDragEnd(e, task, stateFilter === "pendiente")}
                 >
                   <div className="li-main">
                     <span
@@ -447,11 +557,9 @@ function App() {
                     <span className="li-attr">{importanceObj.label}</span>
                     {task.state === "aldia" && (
                       <span
-                        className={`li-attr ${
-                          getMsToNextPending(task) <= 0 ? "expired" : ""
-                        }`}
+                        className={`li-attr ${msLeft <= 0 ? "expired" : ""}`}
                       >
-                        {getHumanTimeLeft(getMsToNextPending(task))}
+                        {getHumanTimeLeft(msLeft)}
                       </span>
                     )}
                   </div>
@@ -469,33 +577,6 @@ function App() {
                       >
                         <path d="M2.5 14.81V17.5h2.69l8.09-8.09-2.69-2.69L2.5 14.81zm14.71-8.04a1 1 0 0 0 0-1.42l-2.36-2.36a1 1 0 0 0-1.42 0l-1.83 1.83 3.78 3.78 1.83-1.83z" />
                       </svg>
-                    </button>
-                    <button
-                      className="actbtn iconbtn"
-                      title="Eliminar"
-                      onClick={() => handleDelete(task.id)}
-                    >
-                      <svg
-                        viewBox="0 0 20 20"
-                        width="16"
-                        height="16"
-                        fill="currentColor"
-                      >
-                        <path d="M6 8v8m4-8v8m4-8v8M4 6h12M9 2h2a2 2 0 0 1 2 2v2H7V4a2 2 0 0 1 2-2z" />
-                      </svg>
-                    </button>
-                    <button
-                      className={`btn li-main-btn ${
-                        task.state === "aldia" ? "warn-btn" : "main-btn"
-                      }`}
-                      onClick={() =>
-                        handleStateChange(
-                          task.id,
-                          task.state === "aldia" ? "pendiente" : "aldia"
-                        )
-                      }
-                    >
-                      {task.state === "aldia" ? "⏪ Pendiente" : "✅ Al día"}
                     </button>
                   </div>
                 </li>
