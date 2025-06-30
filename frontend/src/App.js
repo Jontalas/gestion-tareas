@@ -48,16 +48,64 @@ const STATES = [
 
 function getMsToNextPending(task) {
   if (!task.lastDone || task.state !== "aldia") return 0;
-  const msPeriod = (task.period || 0) * 60 * 1000;
+  const periodMinutes = task.period || 0;
+  const msPeriod = periodMinutes * 60 * 1000;
+  
+  // For periods >= 1 day (1440 minutes), calculate until 00:00 of target day
+  if (periodMinutes >= 1440) {
+    const lastDoneDate = new Date(task.lastDone);
+    const targetDate = new Date(lastDoneDate);
+    const daysToAdd = Math.floor(periodMinutes / 1440);
+    targetDate.setDate(targetDate.getDate() + daysToAdd);
+    // Set to 00:00 of the target day
+    targetDate.setHours(0, 0, 0, 0);
+    return targetDate.getTime() - Date.now();
+  }
+  
+  // For periods < 1 day, use exact calculation
   return task.lastDone + msPeriod - Date.now();
 }
 function getHumanTimeLeft(msLeft) {
   if (msLeft <= 0) return "¡Pendiente!";
+  
   const totalSec = Math.floor(msLeft / 1000);
-  const h = Math.floor(totalSec / 3600);
-  const m = Math.floor((totalSec % 3600) / 60);
-  if (h > 0) return `${h}h ${m}m`;
-  if (m > 0) return `${m}m`;
+  const totalMin = Math.floor(totalSec / 60);
+  const totalHours = Math.floor(totalMin / 60);
+  const totalDays = Math.floor(totalHours / 24);
+  const totalWeeks = Math.floor(totalDays / 7);
+  
+  // Show weeks if >= 1 week
+  if (totalWeeks >= 1) {
+    const remainingDays = totalDays % 7;
+    if (remainingDays === 0) {
+      return totalWeeks === 1 ? "1 semana" : `${totalWeeks} semanas`;
+    } else {
+      return `${totalWeeks}s ${remainingDays}d`;
+    }
+  }
+  
+  // Show days if >= 1 day  
+  if (totalDays >= 1) {
+    const remainingHours = totalHours % 24;
+    if (remainingHours === 0) {
+      return totalDays === 1 ? "1 día" : `${totalDays} días`;
+    } else {
+      return `${totalDays}d ${remainingHours}h`;
+    }
+  }
+  
+  // Show hours and minutes if >= 1 hour
+  if (totalHours >= 1) {
+    const remainingMin = totalMin % 60;
+    return `${totalHours}h ${remainingMin}m`;
+  }
+  
+  // Show minutes if >= 1 minute
+  if (totalMin >= 1) {
+    return `${totalMin}m`;
+  }
+  
+  // Show seconds
   return `${totalSec % 60}s`;
 }
 function getImportanceObj(val) {
@@ -241,11 +289,123 @@ function App() {
 
   // Orden por prioridad
   const [stateFilter, setStateFilter] = useState("pendiente");
+  
+  // Swipe/drag state
+  const [dragState, setDragState] = useState({});
+  
+  function handleStart(e, taskId, isTouch = true) {
+    const clientX = isTouch ? e.touches[0].clientX : e.clientX;
+    const clientY = isTouch ? e.touches[0].clientY : e.clientY;
+    
+    setDragState({
+      taskId,
+      startX: clientX,
+      startY: clientY,
+      currentX: clientX,
+      isDragging: false,
+      isTouch
+    });
+  }
+  
+  function handleMove(e, taskId) {
+    if (dragState.taskId !== taskId) return;
+    
+    const clientX = dragState.isTouch ? e.touches[0].clientX : e.clientX;
+    const clientY = dragState.isTouch ? e.touches[0].clientY : e.clientY;
+    const deltaX = clientX - dragState.startX;
+    const deltaY = clientY - dragState.startY;
+    
+    // Only consider horizontal movement
+    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 10) {
+      e.preventDefault();
+      setDragState(prev => ({
+        ...prev,
+        currentX: clientX,
+        isDragging: true
+      }));
+    }
+  }
+  
+  function handleEnd(e, taskId, taskState) {
+    if (dragState.taskId !== taskId || !dragState.isDragging) {
+      setDragState({});
+      return;
+    }
+    
+    const deltaX = dragState.currentX - dragState.startX;
+    const threshold = 100; // minimum distance for action
+    
+    if (Math.abs(deltaX) >= threshold) {
+      if (deltaX < 0) {
+        // Left swipe - delete task
+        handleDelete(taskId);
+      } else {
+        // Right swipe - change state
+        if (taskState === "pendiente") {
+          handleStateChange(taskId, "aldia");
+        } else if (taskState === "aldia") {
+          handleStateChange(taskId, "pendiente");
+        }
+      }
+    }
+    
+    setDragState({});
+  }
+  
+  function handleTouchStart(e, taskId) {
+    handleStart(e, taskId, true);
+  }
+  
+  function handleTouchMove(e, taskId) {
+    handleMove(e, taskId);
+  }
+  
+  function handleTouchEnd(e, taskId, taskState) {
+    handleEnd(e, taskId, taskState);
+  }
+  
+  function handleMouseDown(e, taskId) {
+    handleStart(e, taskId, false);
+  }
+  
+  function handleMouseMove(e, taskId) {
+    if (dragState.taskId === taskId && !dragState.isTouch) {
+      handleMove(e, taskId);
+    }
+  }
+  
+  function handleMouseUp(e, taskId, taskState) {
+    if (!dragState.isTouch) {
+      handleEnd(e, taskId, taskState);
+    }
+  }
   function getSortedTasks(filteredState) {
     const importanceOrder = { alta: 2, media: 1, baja: 0 };
     return tasks
       .filter((t) => t.state === filteredState)
       .sort((a, b) => {
+        // Special sorting for "al día" tasks
+        if (filteredState === "aldia") {
+          // 1. Time remaining until pending (ascending - less time first)
+          const timeA = getMsToNextPending(a);
+          const timeB = getMsToNextPending(b);
+          if (timeA !== timeB) return timeA - timeB;
+          
+          // 2. Importance (descending - high to low)
+          if (importanceOrder[b.importance] !== importanceOrder[a.importance])
+            return importanceOrder[b.importance] - importanceOrder[a.importance];
+          
+          // 3. Duration (descending - longer first)
+          if (b.duration !== a.duration) return b.duration - a.duration;
+          
+          // 4. Periodicity (descending - longer period first)
+          if (b.period !== a.period) return b.period - a.period;
+          
+          // 5. Name (alphabetical ascending)
+          return a.desc.localeCompare(b.desc);
+        }
+        
+        // Default sorting for other states (like "pendiente")
         if (importanceOrder[b.importance] !== importanceOrder[a.importance])
           return importanceOrder[b.importance] - importanceOrder[a.importance];
         if (b.duration !== a.duration) return b.duration - a.duration;
@@ -336,6 +496,10 @@ function App() {
           <span className="intro-user">
             Accedes como <b>{user.email}</b>
           </span>
+          <br />
+          <small className="swipe-instructions">
+            💡 Arrastra las tareas: ← eliminar, → cambiar estado
+          </small>
         </p>
       </section>
 
@@ -420,14 +584,25 @@ function App() {
           ) : (
             getSortedTasks(stateFilter).map((task) => {
               const importanceObj = getImportanceObj(task.importance);
+              const isDragging = dragState.taskId === task.id && dragState.isDragging;
+              const dragOffset = isDragging ? dragState.currentX - dragState.startX : 0;
+              
               return (
                 <li
-                  className={`task-li imp-${task.importance}`}
+                  className={`task-li imp-${task.importance} ${isDragging ? 'dragging' : ''}`}
                   key={task.id}
                   style={{
                     borderLeftColor: importanceObj.color,
                     background: `var(--bg-imp-${task.importance})`,
+                    transform: isDragging ? `translateX(${dragOffset}px)` : 'translateX(0)',
+                    transition: isDragging ? 'none' : 'transform 0.3s ease'
                   }}
+                  onTouchStart={(e) => handleTouchStart(e, task.id)}
+                  onTouchMove={(e) => handleTouchMove(e, task.id)}
+                  onTouchEnd={(e) => handleTouchEnd(e, task.id, task.state)}
+                  onMouseDown={(e) => handleMouseDown(e, task.id)}
+                  onMouseMove={(e) => handleMouseMove(e, task.id)}
+                  onMouseUp={(e) => handleMouseUp(e, task.id, task.state)}
                 >
                   <div className="li-main">
                     <span
@@ -470,34 +645,13 @@ function App() {
                         <path d="M2.5 14.81V17.5h2.69l8.09-8.09-2.69-2.69L2.5 14.81zm14.71-8.04a1 1 0 0 0 0-1.42l-2.36-2.36a1 1 0 0 0-1.42 0l-1.83 1.83 3.78 3.78 1.83-1.83z" />
                       </svg>
                     </button>
-                    <button
-                      className="actbtn iconbtn"
-                      title="Eliminar"
-                      onClick={() => handleDelete(task.id)}
-                    >
-                      <svg
-                        viewBox="0 0 20 20"
-                        width="16"
-                        height="16"
-                        fill="currentColor"
-                      >
-                        <path d="M6 8v8m4-8v8m4-8v8M4 6h12M9 2h2a2 2 0 0 1 2 2v2H7V4a2 2 0 0 1 2-2z" />
-                      </svg>
-                    </button>
-                    <button
-                      className={`btn li-main-btn ${
-                        task.state === "aldia" ? "warn-btn" : "main-btn"
-                      }`}
-                      onClick={() =>
-                        handleStateChange(
-                          task.id,
-                          task.state === "aldia" ? "pendiente" : "aldia"
-                        )
-                      }
-                    >
-                      {task.state === "aldia" ? "⏪ Pendiente" : "✅ Al día"}
-                    </button>
                   </div>
+                  {isDragging && (
+                    <div className="swipe-hint">
+                      {dragOffset < 0 ? "🗑️ Eliminar" : 
+                       task.state === "pendiente" ? "✅ Al día" : "⏪ Pendiente"}
+                    </div>
+                  )}
                 </li>
               );
             })

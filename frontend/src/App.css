@@ -113,6 +113,12 @@ body {
 .intro-card.minimal { font-size: .95rem; padding: .4em .8em .2em .8em;}
 .intro-user {color: var(--color-primary);}
 .intro-card strong { font-size: 1.02rem; color: var(--color-primary); }
+.swipe-instructions {
+  color: var(--color-accent);
+  font-weight: 500;
+  margin-top: 0.3em;
+  display: inline-block;
+}
 
 /* Login */
 .login-bg {
@@ -229,6 +235,32 @@ body {
   background: var(--color-card);
   box-shadow: 0 1px 3px var(--color-shadow);
   transition: background .13s;
+  touch-action: pan-y;
+  position: relative;
+  overflow: hidden;
+}
+.task-li.dragging {
+  z-index: 10;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+.swipe-hint {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.9em;
+  font-weight: 600;
+  color: var(--color-text);
+  background: rgba(255,255,255,0.9);
+  padding: 0.3em 0.6em;
+  border-radius: 1em;
+  backdrop-filter: blur(4px);
+  z-index: 5;
+}
+.swipe-hint {
+  right: 10px;
+}
+[data-theme="dark"] .swipe-hint {
+  background: rgba(35,35,58,0.9);
 }
 .task-li.imp-alta { border-left-color: var(--imp-alta); background: var(--bg-imp-alta);}
 .task-li.imp-media { border-left-color: var(--imp-media); background: var(--bg-imp-media);}
