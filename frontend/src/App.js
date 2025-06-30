@@ -358,7 +358,14 @@ function App() {
     setPendingDelete(null);
   }
 
-  // --- RENDER ---
+  // Iconos de atributos
+  const ICONS = {
+    duracion: <span role="img" aria-label="Duración" className="li-attr-icon">🕒</span>,
+    periodicidad: <span role="img" aria-label="Periodicidad" className="li-attr-icon">🔁</span>,
+    importancia: <span role="img" aria-label="Importancia" className="li-attr-icon">❗</span>,
+    tiempo: <span role="img" aria-label="Tiempo restante" className="li-attr-icon">⏳</span>,
+  };
+
   if (!authReady) {
     return <div className="login-bg"><div className="login-box">Cargando...</div></div>;
   }
@@ -533,6 +540,13 @@ function App() {
                 .filter(Boolean)
                 .join(" ");
               // Swipe: isPendingList es true si estamos en la lista de pendientes
+              // INDICADORES VISUALES DE SWIPE
+              const leftLabel = <>🗑️ <span className="swipe-label-text">Eliminar</span></>;
+              const rightLabel =
+                stateFilter === "pendiente"
+                  ? <><span className="swipe-label-text">Al día</span> ✅</>
+                  : <><span className="swipe-label-text">Pendiente</span> 🔄</>;
+
               return (
                 <li
                   className={`task-li imp-${task.importance} ${extraClass}`}
@@ -553,6 +567,30 @@ function App() {
                   onMouseMove={e => isDragged && handleDragMove(e)}
                   onMouseUp={e => handleDragEnd(e, task, stateFilter === "pendiente")}
                 >
+                  {/* Indicadores swipe visuales */}
+                  <div
+                    className="swipe-label swipe-label-left"
+                    style={{
+                      opacity:
+                        isDragged && draggedDelta < 0
+                          ? Math.min(Math.abs(draggedDelta) / 60, 1)
+                          : 0.3,
+                    }}
+                  >
+                    {leftLabel}
+                  </div>
+                  <div
+                    className="swipe-label swipe-label-right"
+                    style={{
+                      opacity:
+                        isDragged && draggedDelta > 0
+                          ? Math.min(draggedDelta / 60, 1)
+                          : 0.3,
+                    }}
+                  >
+                    {rightLabel}
+                  </div>
+
                   <div className="li-main">
                     <span
                       className="li-imp-dot"
@@ -563,17 +601,19 @@ function App() {
                   </div>
                   <div className="li-details">
                     <span className="li-attr">
-                      {humanizeDuration(task.duration)}
+                      {ICONS.duracion} {humanizeDuration(task.duration)}
                     </span>
                     <span className="li-attr">
-                      {humanizeDuration(task.period)}
+                      {ICONS.periodicidad} {humanizeDuration(task.period)}
                     </span>
-                    <span className="li-attr">{importanceObj.label}</span>
+                    <span className="li-attr">
+                      {ICONS.importancia} {importanceObj.label}
+                    </span>
                     {task.state === "aldia" && (
                       <span
                         className={`li-attr ${msLeft <= 0 ? "expired" : ""}`}
                       >
-                        {getHumanTimeLeft(msLeft)}
+                        {ICONS.tiempo} {getHumanTimeLeft(msLeft)}
                       </span>
                     )}
                   </div>
