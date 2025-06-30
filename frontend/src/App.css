@@ -406,7 +406,7 @@ body {
 }
 /* --- FIN SWIPE FEEDBACK --- */
 
-/* --- SWIPE LABELS (indicadores visuales izquierda/derecha) --- */
+/* --- SWIPE LABELS (solo derecha, para cambiar estado) --- */
 .swipe-label {
   position: absolute;
   top: 50%;
@@ -414,7 +414,7 @@ body {
   pointer-events: none;
   font-size: 1em;
   font-weight: 500;
-  color: #e74c3c;
+  color: #2ecc71;
   background: transparent;
   z-index: 2;
   opacity: 0.3;
@@ -425,19 +425,54 @@ body {
   padding: 0 0.1em;
   user-select: none;
 }
-.swipe-label-left {
-  left: 12px;
-  color: #e74c3c;
-}
 .swipe-label-right {
   right: 16px;
   color: #2ecc71;
   text-align: right;
+  display: flex;
+  align-items: center;
+}
+.swipe-label-icon {
+  margin-left: 0.10em;
+  font-size: 1.17em;
+  vertical-align: middle;
+}
+.swipe-arrow-icon {
+  display: inline-block;
+  margin-right: 0.11em;
+  font-size: 1.3em;
+  vertical-align: middle;
+  opacity: 0.8;
 }
 .swipe-label-text {
   font-size: 0.96em;
   margin: 0 0.12em;
   letter-spacing: 0.01em;
+}
+
+/* --- Iconos de atributos --- */
+.li-attr {
+  font-size: 0.99em;
+  color: #555;
+  display: flex;
+  align-items: center;
+  gap: 0.25em;
+}
+[data-theme="dark"] .li-attr {
+  color: #ccc;
+}
+.li-attr-icon {
+  display: inline-block;
+  font-size: 1.1em;
+  margin-right: 2px;
+  filter: grayscale(0.2);
+  opacity: 0.85;
+  vertical-align: middle;
+  line-height: 1;
+}
+.li-attr.expired {
+  color: #e74c3c;
+  font-weight: bold;
 }
 
 /* --- MODAL CONFIRMACIÓN --- */

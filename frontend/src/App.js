@@ -362,9 +362,17 @@ function App() {
   const ICONS = {
     duracion: <span role="img" aria-label="Duración" className="li-attr-icon">🕒</span>,
     periodicidad: <span role="img" aria-label="Periodicidad" className="li-attr-icon">🔁</span>,
-    importancia: <span role="img" aria-label="Importancia" className="li-attr-icon">❗</span>,
     tiempo: <span role="img" aria-label="Tiempo restante" className="li-attr-icon">⏳</span>,
   };
+
+  // Iconos para swipe a la derecha (mantener el icono según el estado, pero flecha)
+  const rightSwipeArrow = (
+    <span className="swipe-arrow-icon" aria-label="Flecha derecha">→</span>
+  );
+  const rightLabel = (state) =>
+    state === "pendiente"
+      ? (<>{rightSwipeArrow}<span className="swipe-label-icon">✅</span></>)
+      : (<>{rightSwipeArrow}<span className="swipe-label-icon">🔄</span></>);
 
   if (!authReady) {
     return <div className="login-bg"><div className="login-box">Cargando...</div></div>;
@@ -540,12 +548,6 @@ function App() {
                 .filter(Boolean)
                 .join(" ");
               // Swipe: isPendingList es true si estamos en la lista de pendientes
-              // INDICADORES VISUALES DE SWIPE
-              const leftLabel = <>🗑️ <span className="swipe-label-text">Eliminar</span></>;
-              const rightLabel =
-                stateFilter === "pendiente"
-                  ? <><span className="swipe-label-text">Al día</span> ✅</>
-                  : <><span className="swipe-label-text">Pendiente</span> 🔄</>;
 
               return (
                 <li
@@ -567,18 +569,7 @@ function App() {
                   onMouseMove={e => isDragged && handleDragMove(e)}
                   onMouseUp={e => handleDragEnd(e, task, stateFilter === "pendiente")}
                 >
-                  {/* Indicadores swipe visuales */}
-                  <div
-                    className="swipe-label swipe-label-left"
-                    style={{
-                      opacity:
-                        isDragged && draggedDelta < 0
-                          ? Math.min(Math.abs(draggedDelta) / 60, 1)
-                          : 0.3,
-                    }}
-                  >
-                    {leftLabel}
-                  </div>
+                  {/* Indicador swipe a la derecha */}
                   <div
                     className="swipe-label swipe-label-right"
                     style={{
@@ -588,7 +579,7 @@ function App() {
                           : 0.3,
                     }}
                   >
-                    {rightLabel}
+                    {rightLabel(stateFilter)}
                   </div>
 
                   <div className="li-main">
@@ -605,9 +596,6 @@ function App() {
                     </span>
                     <span className="li-attr">
                       {ICONS.periodicidad} {humanizeDuration(task.period)}
-                    </span>
-                    <span className="li-attr">
-                      {ICONS.importancia} {importanceObj.label}
                     </span>
                     {task.state === "aldia" && (
                       <span
