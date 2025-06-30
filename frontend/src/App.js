@@ -194,6 +194,7 @@ function App() {
   const [importance, setImportance] = useState("media");
   const [editId, setEditId] = useState(null);
   const [error, setError] = useState("");
+  const [stateFilter, setStateFilter] = useState("pendiente");
   function resetForm() {
     setDesc("");
     setDuration("");
