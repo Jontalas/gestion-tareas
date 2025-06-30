@@ -2,6 +2,28 @@ import React, { useState, useEffect, useRef } from "react";
 import { parseDuration, humanizeDuration } from "./utils/timeUtils";
 import "./App.css";
 
+// Simulación de "backend" en localStorage (para demo)
+function getUserKey(user) {
+  return `tasks_${user?.email || "offline"}`;
+}
+function saveTasksForUser(user, tasks) {
+  localStorage.setItem(getUserKey(user), JSON.stringify(tasks));
+}
+function loadTasksForUser(user) {
+  const stored = localStorage.getItem(getUserKey(user));
+  return stored ? JSON.parse(stored) : [];
+}
+function saveUserSession(user) {
+  localStorage.setItem("loggedUser", JSON.stringify(user));
+}
+function loadUserSession() {
+  const data = localStorage.getItem("loggedUser");
+  return data ? JSON.parse(data) : null;
+}
+function clearUserSession() {
+  localStorage.removeItem("loggedUser");
+}
+
 const IMPORTANCE_LEVELS = [
   { value: "alta", label: "Alta" },
   { value: "media", label: "Media" },
@@ -14,15 +36,12 @@ const STATES = [
   { value: "aldia", label: "Al día" }
 ];
 
-// Devuelve la diferencia en milisegundos entre ahora y lastDone+period (en minutos)
 function getMsToNextPending(task) {
   if (!task.lastDone || task.state !== "aldia") return 0;
   const msPeriod = (task.period || 0) * 60 * 1000;
   const msLeft = task.lastDone + msPeriod - Date.now();
   return msLeft;
 }
-
-// Devuelve string tipo "1h 30m" o "¡Pendiente!"
 function getHumanTimeLeft(msLeft) {
   if (msLeft <= 0) return "¡Pendiente!";
   const totalSec = Math.floor(msLeft / 1000);
@@ -37,7 +56,57 @@ function getHumanTimeLeft(msLeft) {
 }
 
 function App() {
+  // --- Login state ---
+  const [user, setUser] = useState(null);
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPass, setLoginPass] = useState("");
+  const [loginError, setLoginError] = useState("");
+  useEffect(() => {
+    const u = loadUserSession();
+    if (u) setUser(u);
+  }, []);
+  function handleLogin(e) {
+    e.preventDefault();
+    setLoginError("");
+    if (!loginEmail.match(/^[^@]+@[^@]+\.[^@]+$/)) {
+      setLoginError("Introduce un email válido.");
+      return;
+    }
+    if (!loginPass || loginPass.length < 3) {
+      setLoginError("Contraseña demasiado corta.");
+      return;
+    }
+    // Para demo: guardamos usuarios en localStorage ({"userdb":{email:{email,pass}}})
+    const userdb = JSON.parse(localStorage.getItem("userdb") || "{}");
+    if (!userdb[loginEmail]) {
+      // Nuevo usuario
+      userdb[loginEmail] = { email: loginEmail, pass: loginPass };
+      localStorage.setItem("userdb", JSON.stringify(userdb));
+    } else if (userdb[loginEmail].pass !== loginPass) {
+      setLoginError("Contraseña incorrecta.");
+      return;
+    }
+    const u = { email: loginEmail };
+    setUser(u);
+    saveUserSession(u);
+    setLoginEmail("");
+    setLoginPass("");
+  }
+  function handleLogout() {
+    clearUserSession();
+    setUser(null);
+  }
+
+  // --- Tareas ---
   const [tasks, setTasks] = useState([]);
+  useEffect(() => {
+    if (user) setTasks(loadTasksForUser(user));
+  }, [user]);
+  useEffect(() => {
+    if (user) saveTasksForUser(user, tasks);
+  }, [tasks, user]);
+
+  // --- Resto de estados de la app ---
   const [desc, setDesc] = useState("");
   const [duration, setDuration] = useState("");
   const [period, setPeriod] = useState("");
@@ -45,41 +114,16 @@ function App() {
   const [editIdx, setEditIdx] = useState(null);
   const [error, setError] = useState("");
   const [stateFilter, setStateFilter] = useState("pendiente");
-  const [, setRefresh] = useState(0); // Para forzar renders periódicos
+  const [, setRefresh] = useState(0);
   const intervalRef = useRef();
-  const [darkMode, setDarkMode] = useState(() =>
-    window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
-  );
 
-  // Persistencia modo oscuro/claro
-  useEffect(() => {
-    const localTheme = localStorage.getItem("themeMode");
-    if (localTheme) setDarkMode(localTheme === "dark");
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem("themeMode", darkMode ? "dark" : "light");
-    document.documentElement.setAttribute("data-theme", darkMode ? "dark" : "light");
-  }, [darkMode]);
-
-  // Cargar tareas desde localStorage al inicio
-  useEffect(() => {
-    const stored = localStorage.getItem("tasks");
-    if (stored) setTasks(JSON.parse(stored));
-  }, []);
-
-  // Guardar tareas en localStorage cuando cambian
-  useEffect(() => {
-    localStorage.setItem("tasks", JSON.stringify(tasks));
-  }, [tasks]);
-
-  // Intervalo para forzar render y actualizar tiempos
+  // Autorefresco para tiempos
   useEffect(() => {
     intervalRef.current = setInterval(() => setRefresh(x => x + 1), 1000);
     return () => clearInterval(intervalRef.current);
   }, []);
 
-  // Efecto para pasar tareas automáticamente a pendiente cuando vencen
+  // Cambio automático a pendiente
   useEffect(() => {
     setTasks(prevTasks =>
       prevTasks.map(task => {
@@ -93,7 +137,7 @@ function App() {
         return task;
       })
     );
-  }, [tasks, setTasks, setRefresh]);
+  }, [tasks]);
 
   function resetForm() {
     setDesc("");
@@ -202,82 +246,109 @@ function App() {
     return `${minutes}m`;
   }
 
+  // --- RENDER ---
+  // Pantalla de login
+  if (!user) {
+    return (
+      <div className="login-bg">
+        <form className="login-box" onSubmit={handleLogin}>
+          <h2>Iniciar sesión</h2>
+          <input
+            type="email"
+            placeholder="Email"
+            value={loginEmail}
+            onChange={e => setLoginEmail(e.target.value)}
+            autoFocus
+            required
+          />
+          <input
+            type="password"
+            placeholder="Contraseña"
+            value={loginPass}
+            onChange={e => setLoginPass(e.target.value)}
+            required
+          />
+          <button type="submit" className="btn main-btn" style={{width:"100%",marginTop:10}}>
+            Entrar / Registrarse
+          </button>
+          {loginError && <div className="error-msg">{loginError}</div>}
+          <div className="login-hint">Tus tareas quedarán asociadas a tu cuenta y accesibles desde cualquier dispositivo.</div>
+        </form>
+      </div>
+    );
+  }
+
   return (
-    <div className="main-container">
+    <div className="main-container compact">
       <header className="header-bar">
         <h1 className="logo">
           <span role="img" aria-label="tarea">📋</span> TaskFlow
         </h1>
-        <button
-          className="mode-toggle"
-          onClick={() => setDarkMode(m => !m)}
-          aria-label="Cambiar modo claro/oscuro"
-          title={darkMode ? "Modo claro" : "Modo oscuro"}
-        >
-          {darkMode ? "🌙" : "🌞"}
-        </button>
+        <div style={{display:"flex", alignItems:"center", gap:10}}>
+          <span className="user-email">{user.email}</span>
+          <button className="btn logout-btn" title="Cerrar sesión" onClick={handleLogout}>Salir</button>
+        </div>
       </header>
 
-      <section className="intro-card">
+      <section className="intro-card minimal">
         <strong>¡Bienvenido a TaskFlow!</strong>
         <p>
-          Gestiona tus tareas recurrentes fácilmente. <br />
-          Usa estos formatos para <b>duración</b> y <b>periodicidad</b>:
+          Gestiona tus tareas recurrentes fácilmente.<br/>
+          <span className="intro-user">Accedes como <b>{user.email}</b></span>
         </p>
-        <ul>
-          <li><b>m</b> para minutos (<code>30m</code>)</li>
-          <li><b>h</b> para horas (<code>2h</code>)</li>
-          <li><b>d</b> para días (<code>1d</code>)</li>
-          <li><b>w</b> para semanas (<code>1w</code>)</li>
-        </ul>
       </section>
 
-      <form onSubmit={handleAddOrEditTask} className="task-form">
+      <form onSubmit={handleAddOrEditTask} className="task-form dense" autoComplete="off">
         <input
           type="text"
           value={desc}
           onChange={e => setDesc(e.target.value)}
           required
-          placeholder="Descripción de la tarea"
+          placeholder="¿Qué tienes que hacer?"
           className="input"
+          autoFocus
         />
-        <input
-          type="text"
-          value={duration}
-          onChange={e => setDuration(e.target.value)}
-          placeholder="Duración (ej: 30m, 2h, 1d, 1w)"
-          required
-          className="input"
-        />
-        <input
-          type="text"
-          value={period}
-          onChange={e => setPeriod(e.target.value)}
-          placeholder="Periodicidad (ej: 30m, 2h, 1d, 1w)"
-          required
-          className="input"
-        />
-        <select
-          value={importance}
-          onChange={e => setImportance(e.target.value)}
-          required
-          className="input"
-        >
-          {IMPORTANCE_LEVELS.map(opt =>
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
-          )}
-        </select>
-        <div className="form-actions">
-          <button type="submit" className="btn main-btn">
-            {editIdx !== null ? "Guardar" : "Añadir"}
-          </button>
-          {editIdx !== null && (
-            <button
-              type="button"
-              className="btn"
-              onClick={resetForm}
-            >Cancelar</button>
-          )}
+        <div className="form-row">
+          <input
+            type="text"
+            value={duration}
+            onChange={e => setDuration(e.target.value)}
+            placeholder="Duración (ej: 30m, 2h, 1d, 1w)"
+            required
+            className="input"
+          />
+          <input
+            type="text"
+            value={period}
+            onChange={e => setPeriod(e.target.value)}
+            placeholder="Periodicidad (ej: 30m, 2h, 1d, 1w)"
+            required
+            className="input"
+          />
+        </div>
+        <div className="form-row">
+          <select
+            value={importance}
+            onChange={e => setImportance(e.target.value)}
+            required
+            className="input"
+          >
+            {IMPORTANCE_LEVELS.map(opt =>
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            )}
+          </select>
+          <div className="form-actions">
+            <button type="submit" className="btn main-btn">
+              {editIdx !== null ? "Guardar" : "Añadir"}
+            </button>
+            {editIdx !== null && (
+              <button
+                type="button"
+                className="btn"
+                onClick={resetForm}
+              >Cancelar</button>
+            )}
+          </div>
         </div>
         {error && <div className="error-msg">{error}</div>}
       </form>
@@ -296,7 +367,7 @@ function App() {
 
       <section className="task-list">
         <h2 className="section-title">{STATES.find(s => s.value === stateFilter)?.label ?? ""}</h2>
-        <div className="tasks-grid">
+        <div className="tasks-grid compact">
           {getSortedTasks(stateFilter).length === 0 ? (
             <div className="empty-state">No hay tareas en este estado</div>
           ) : (
@@ -340,18 +411,32 @@ function App() {
                     )}
                   </ul>
                   <div className="card-actions">
-                    <button className="btn" onClick={() => handleEdit(globalIdx)}>✏️ Editar</button>
-                    <button className="btn" onClick={() => handleDelete(globalIdx)}>🗑️ Eliminar</button>
-                    {task.state === "pendiente" && (
-                      <button className="btn main-btn"
-                        onClick={() => handleStateChange(globalIdx, "aldia")}
-                      >✅ Marcar al día</button>
-                    )}
-                    {task.state === "aldia" && (
-                      <button className="btn warn-btn"
-                        onClick={() => handleStateChange(globalIdx, "pendiente")}
-                      >⏪ Marcar pendiente</button>
-                    )}
+                    <button
+                      className="actbtn iconbtn"
+                      title="Editar"
+                      onClick={() => handleEdit(globalIdx)}
+                    >
+                      <svg viewBox="0 0 20 20" width="18" height="18" fill="currentColor"><path d="M2.5 14.81V17.5h2.69l8.09-8.09-2.69-2.69L2.5 14.81zm14.71-8.04a1 1 0 0 0 0-1.42l-2.36-2.36a1 1 0 0 0-1.42 0l-1.83 1.83 3.78 3.78 1.83-1.83z"/></svg>
+                    </button>
+                    <button
+                      className="actbtn iconbtn"
+                      title="Eliminar"
+                      onClick={() => handleDelete(globalIdx)}
+                    >
+                      <svg viewBox="0 0 20 20" width="18" height="18" fill="currentColor"><path d="M6 8v8m4-8v8m4-8v8M4 6h12M9 2h2a2 2 0 0 1 2 2v2H7V4a2 2 0 0 1 2-2z"/></svg>
+                    </button>
+                    <div className="main-actions">
+                      {task.state === "pendiente" && (
+                        <button className="btn main-btn highlight"
+                          onClick={() => handleStateChange(globalIdx, "aldia")}
+                        >✅ Marcar al día</button>
+                      )}
+                      {task.state === "aldia" && (
+                        <button className="btn warn-btn highlight"
+                          onClick={() => handleStateChange(globalIdx, "pendiente")}
+                        >⏪ Marcar pendiente</button>
+                      )}
+                    </div>
                   </div>
                 </article>
               );
