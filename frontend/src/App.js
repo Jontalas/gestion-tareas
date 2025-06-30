@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { parseDuration, humanizeDuration } from "./utils/timeUtils";
 import "./App.css";
+import { initializeApp } from "firebase/app";
+import { getDatabase, ref, set, push, onValue, remove, update } from "firebase/database";
 
 // --- Firebase Realtime DB ---
 // Crea tu proyecto en https://console.firebase.google.com/
@@ -14,8 +16,6 @@ const firebaseConfig = {
   messagingSenderId: "571206795697",
   appId: "1:571206795697:web:cad2b97a38ab0fb875fd90"
 };
-import { initializeApp } from "firebase/app";
-import { getDatabase, ref, set, push, onValue, remove, update } from "firebase/database";
 
 let app, db;
 if (!window._firebaseInit) {
@@ -62,6 +62,7 @@ function getUserDbKey(email) {
 }
 
 function App() {
+  const [stateFilter, setStateFilter] = useState("pendiente");
   // --- Tema claro/oscuro
   const [darkMode, setDarkMode] = useState(
     () => localStorage.getItem("themeMode") === "dark" ||
