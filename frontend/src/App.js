@@ -62,7 +62,6 @@ function getUserDbKey(email) {
 }
 
 function App() {
-  const [stateFilter, setStateFilter] = useState("pendiente");
   // --- Tema claro/oscuro
   const [darkMode, setDarkMode] = useState(
     () => localStorage.getItem("themeMode") === "dark" ||
