@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { parseDuration, humanizeDuration } from "./utils/timeUtils";
 import "./App.css";
+import { Helmet } from "react-helmet";
 
 // Firebase imports
 import { initializeApp } from "firebase/app";
@@ -17,6 +18,7 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
+  sendEmailVerification,
   signOut,
 } from "firebase/auth";
 
@@ -87,6 +89,11 @@ function getUserDbKey(email) {
 }
 
 function App() {
+  // Set app name in browser tab
+  useEffect(() => {
+    document.title = "TaskFlow";
+  }, []);
+
   // Tema claro/oscuro
   const [darkMode, setDarkMode] = useState(
     () =>
@@ -102,6 +109,7 @@ function App() {
   // Autenticación Firebase
   const [user, setUser] = useState(null);
   const [authReady, setAuthReady] = useState(false);
+  const [emailVerificationSent, setEmailVerificationSent] = useState(false);
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
@@ -120,11 +128,22 @@ function App() {
   async function handleLogin(e) {
     e.preventDefault();
     setLoginError("");
+    setEmailVerificationSent(false);
     try {
       if (isRegister) {
-        await createUserWithEmailAndPassword(auth, loginEmail, loginPass);
+        const cred = await createUserWithEmailAndPassword(auth, loginEmail, loginPass);
+        await sendEmailVerification(cred.user);
+        setEmailVerificationSent(true);
+        setLoginError("Debes confirmar tu correo antes de acceder. Revisa tu bandeja de entrada.");
+        signOut(auth); // Para evitar acceso sin verificar
       } else {
-        await signInWithEmailAndPassword(auth, loginEmail, loginPass);
+        const cred = await signInWithEmailAndPassword(auth, loginEmail, loginPass);
+        if (!cred.user.emailVerified) {
+          await sendEmailVerification(cred.user);
+          setLoginError("Debes confirmar tu correo antes de acceder. Se ha reenviado el correo de verificación.");
+          setEmailVerificationSent(true);
+          signOut(auth);
+        }
       }
     } catch (err) {
       setLoginError(
@@ -296,6 +315,9 @@ function App() {
   // Estado para confirmación de borrado
   const [pendingDelete, setPendingDelete] = useState(null);
 
+  // Margen de seguridad aumentado (por ejemplo 90px)
+  const SWIPE_THRESHOLD = 90;
+
   function handleDragStart(e, id) {
     dragInfo.current = {
       id,
@@ -325,14 +347,13 @@ function App() {
     }
     const { deltaX, direction, id } = dragInfo.current;
     dragInfo.current = {};
-    const threshold = 60;
-    if (direction === "left" && Math.abs(deltaX) > threshold) {
+    if (direction === "left" && Math.abs(deltaX) > SWIPE_THRESHOLD) {
       setSwipeClass((prev) => ({ ...prev, [id]: "swipe-remove" }));
       setTimeout(() => {
         setSwipeClass((prev) => ({ ...prev, [id]: undefined }));
         setPendingDelete(id);
       }, 300);
-    } else if (direction === "right" && Math.abs(deltaX) > threshold) {
+    } else if (direction === "right" && Math.abs(deltaX) > SWIPE_THRESHOLD) {
       setSwipeClass((prev) => ({ ...prev, [id]: "swipe-state" }));
       setTimeout(() => {
         if (isPendingList) {
@@ -380,8 +401,11 @@ function App() {
   if (!user) {
     return (
       <div className="login-bg">
+        <Helmet>
+          <title>TaskFlow</title>
+        </Helmet>
         <form className="login-box" onSubmit={handleLogin}>
-          <h2>{isRegister ? "Registrarse" : "Iniciar sesión"}</h2>
+          <h2>{isRegister ? "Registrarse" : "Iniciar sesión en TaskFlow"}</h2>
           <input
             type="email"
             placeholder="Email"
@@ -412,7 +436,16 @@ function App() {
           >
             {isRegister ? "¿Ya tienes cuenta? Inicia sesión" : "¿No tienes cuenta? Regístrate"}
           </button>
-          {loginError && <div className="error-msg">{loginError}</div>}
+          {(loginError || emailVerificationSent) && (
+            <div className="error-msg">
+              {loginError}
+              {emailVerificationSent && (
+                <div style={{marginTop:8, color:"#888", fontSize:"0.97em"}}>
+                  Si no ves el correo revisa tu carpeta de SPAM o solicita el reenvío.
+                </div>
+              )}
+            </div>
+          )}
         </form>
       </div>
     );
@@ -420,6 +453,9 @@ function App() {
 
   return (
     <div className={`main-container list-mode ${darkMode ? "dark" : "light"}`}>
+      <Helmet>
+        <title>TaskFlow</title>
+      </Helmet>
       <header className="header-bar">
         <h1 className="logo">
           <span role="img" aria-label="tarea">
@@ -547,7 +583,6 @@ function App() {
               ]
                 .filter(Boolean)
                 .join(" ");
-              // Swipe: isPendingList es true si estamos en la lista de pendientes
 
               return (
                 <li
@@ -575,7 +610,7 @@ function App() {
                     style={{
                       opacity:
                         isDragged && draggedDelta > 0
-                          ? Math.min(draggedDelta / 60, 1)
+                          ? Math.min(draggedDelta / SWIPE_THRESHOLD, 1)
                           : 0.3,
                     }}
                   >
