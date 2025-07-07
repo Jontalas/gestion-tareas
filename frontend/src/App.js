@@ -18,8 +18,8 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  sendEmailVerification,
   signOut,
+  fetchSignInMethodsForEmail,
 } from "firebase/auth";
 
 // PON TU CONFIGURACIÓN DE FIREBASE AQUÍ
@@ -107,7 +107,6 @@ function App() {
   // Autenticación Firebase
   const [user, setUser] = useState(null);
   const [authReady, setAuthReady] = useState(false);
-  const [emailVerificationSent, setEmailVerificationSent] = useState(false);
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
@@ -126,47 +125,33 @@ function App() {
   async function handleLogin(e) {
     e.preventDefault();
     setLoginError("");
-    setEmailVerificationSent(false);
     try {
       if (isRegister) {
-        // REGISTRO NUEVO: Obligatorio confirmar email
-        const cred = await createUserWithEmailAndPassword(auth, loginEmail, loginPass);
-        await sendEmailVerification(cred.user);
-        setEmailVerificationSent(true);
-        setLoginError("Debes confirmar tu correo antes de acceder. Revisa tu bandeja de entrada.");
-        signOut(auth);
+        // Antes de crear, comprobamos si ya existe cuenta
+        const methods = await fetchSignInMethodsForEmail(auth, loginEmail);
+        if (methods.length > 0) {
+          setLoginError("Ya existe una cuenta con ese email.");
+          return;
+        }
+        // Crear usuario normalmente (no hay verificación por correo)
+        await createUserWithEmailAndPassword(auth, loginEmail, loginPass);
+        // El usuario se loguea automáticamente tras crear la cuenta
       } else {
         // LOGIN
-        const cred = await signInWithEmailAndPassword(auth, loginEmail, loginPass);
-        const dbKey = getUserDbKey(cred.user.email);
-        const userRef = ref(db, `tasks/${dbKey}`);
-        onValue(
-          userRef,
-          (snapshot) => {
-            if (snapshot.exists()) {
-              // Usuario antiguo: dejar pasar aunque no esté verificado
-              setUser(cred.user);
-            } else if (!cred.user.emailVerified) {
-              // Usuario nuevo: requiere verificación
-              setLoginError("Debes confirmar tu correo antes de acceder. Revisa tu bandeja de entrada.");
-              setEmailVerificationSent(true);
-              signOut(auth);
-            } else {
-              // Usuario nuevo y verificado
-              setUser(cred.user);
-            }
-          },
-          { onlyOnce: true }
-        );
+        await signInWithEmailAndPassword(auth, loginEmail, loginPass);
       }
     } catch (err) {
       setLoginError(
         err.code === "auth/email-already-in-use"
           ? "Ya existe una cuenta con ese email."
+          : err.code === "auth/invalid-password"
+          ? "Contraseña no válida."
           : err.code === "auth/wrong-password"
           ? "Contraseña incorrecta."
           : err.code === "auth/user-not-found"
           ? "Usuario no encontrado."
+          : err.code === "auth/weak-password"
+          ? "La contraseña es demasiado débil."
           : err.message
       );
     }
@@ -450,14 +435,9 @@ function App() {
           >
             {isRegister ? "¿Ya tienes cuenta? Inicia sesión" : "¿No tienes cuenta? Regístrate"}
           </button>
-          {(loginError || emailVerificationSent) && (
+          {loginError && (
             <div className="error-msg">
               {loginError}
-              {emailVerificationSent && (
-                <div style={{marginTop:8, color:"#888", fontSize:"0.97em"}}>
-                  Si no ves el correo revisa tu carpeta de SPAM o solicita el reenvío.
-                </div>
-              )}
             </div>
           )}
         </form>
