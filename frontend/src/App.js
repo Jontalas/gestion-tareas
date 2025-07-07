@@ -559,9 +559,6 @@ function App() {
       </div>
       <div className="scrollable-task-list">
         <section className="task-list">
-          <h2 className="section-title">
-            {STATES.find((s) => s.value === stateFilter)?.label ?? ""}
-          </h2>
           <ul className="task-ul">
             {getSortedTasks(stateFilter).length === 0 ? (
               <li className="empty-state">No hay tareas en este estado</li>
