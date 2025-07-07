@@ -14,20 +14,10 @@ body {
   background: #f7f7f7;
   color: #222;
   min-height: 100vh;
-  /* Prevent unwanted horizontal scroll */
   overflow-x: hidden;
 }
 
-[data-theme="dark"] {
-  --bg-imp-alta: #47282b;
-  --bg-imp-media: #4b4827;
-  --bg-imp-baja: #22472b;
-  --header-bg: #161c21;
-  --header-fg: #fff;
-  background: #181b1e;
-  color: #eee;
-}
-
+/* Layout for fixed header and scrollable content */
 .main-container {
   max-width: 560px;
   margin: 24px auto 0 auto;
@@ -35,13 +25,13 @@ body {
   border-radius: 12px;
   box-shadow: 0 3px 18px #0002;
   min-height: 90vh;
-  padding-bottom: 48px;
-  overflow: hidden;
   position: relative;
   width: 100%;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
 }
 
 @media (max-width: 600px) {
@@ -50,17 +40,20 @@ body {
     min-width: 0;
     margin: 0;
     border-radius: 0;
-    /* Ensures nothing overflows horizontally */
     box-shadow: none;
-    padding-bottom: 70px;
+    height: 100vh;
+    padding-bottom: 0;
   }
 }
 
-[data-theme="dark"] .main-container {
-  background: #23272c;
+/* Sticky/Fijo header y nav/form */
+.fixed-header {
+  position: relative;
+  z-index: 100;
+  background: inherit;
+  box-sizing: border-box;
 }
 
-/* HEADER 2 FILAS */
 .header-bar {
   width: 100%;
   background: var(--header-bg);
@@ -160,35 +153,8 @@ body {
   margin-left: 0.5em;
 }
 
-.intro-card {
-  background: #fafafa;
-  border-radius: 8px;
-  padding: 1.2em;
-  margin: 1.2em 0 1.8em 0;
-  box-shadow: 0 2px 8px #0001;
-  width: 100%;
-  box-sizing: border-box;
-}
-[data-theme="dark"] .intro-card {
-  background: #21282f;
-}
-.intro-card.minimal {
-  margin: 1.3em 0 1em 0;
-  padding: 1em;
-  font-size: 1.1em;
-}
-
-@media (max-width: 600px) {
-  .intro-card, .intro-card.minimal {
-    border-radius: 0;
-    margin: 0.8em 0 0.7em 0;
-    padding: 0.85em 0.65em;
-    font-size: 1em;
-  }
-}
-
 .task-form {
-  margin: 0 0 1.8em 0;
+  margin: 0 0 1.2em 0;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -324,6 +290,23 @@ body {
   color: #fff;
 }
 
+/* Scrollable area for tasks */
+.scrollable-task-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 100%;
+  overflow-y: auto;
+  width: 100%;
+  box-sizing: border-box;
+  background: inherit;
+}
+
+/* Elimina intro-card y footer */
+.intro-card, .intro-card.minimal, .footer {
+  display: none !important;
+}
+
+/* ------- Tareas, lista y resto de estilos ------- */
 .task-list {
   margin: 0 0 1.5em 0;
   width: 100%;
@@ -516,40 +499,13 @@ body {
   word-break: break-word;
 }
 
-.footer {
-  background: #fff;
-  color: #888;
-  text-align: center;
-  padding: 8px 0;
-  font-size: 0.98em;
-  box-shadow: 0 -2px 12px #0002;
-  z-index: 5;
-  border-radius: 0 0 12px 12px;
-  width: 100%;
-  box-sizing: border-box;
-  position: relative;
-}
-[data-theme="dark"] .footer {
-  background: #23272c;
-  color: #aaa;
-}
-
-@media (max-width: 600px) {
-  .footer {
-    border-radius: 0;
-    font-size: 0.95em;
-    padding: 10px 0 12px 0;
-    min-height: 38px;
-  }
-}
-
+/* --- LOGIN, MODAL, SWIPE, RESTO --- */
 .login-bg {
   min-height: 100vh;
   background: #2ecc71;
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Prevent scrollbars on mobile */
   width: 100vw;
   overflow-x: hidden;
 }

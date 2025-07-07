@@ -456,215 +456,206 @@ function App() {
       <Helmet>
         <title>TaskFlow</title>
       </Helmet>
-      <header className="header-bar header-bar-2row">
-        <div className="header-row header-row-top">
-          <div className="logo">
-            <span role="img" aria-label="tarea">
-              📋
-            </span>{" "}
-            TaskFlow
-          </div>
-          <button
-            className="mode-toggle"
-            onClick={() => setDarkMode((m) => !m)}
-            aria-label="Cambiar modo claro/oscuro"
-            title={darkMode ? "Modo claro" : "Modo oscuro"}
-          >
-            {darkMode ? "🌙" : "🌞"}
-          </button>
-        </div>
-        <div className="header-row header-row-bottom">
-          <span className="user-email">{user.email}</span>
-          <button
-            className="btn logout-btn"
-            title="Cerrar sesión"
-            onClick={handleLogout}
-          >
-            Salir
-          </button>
-        </div>
-      </header>
-
-      <section className="intro-card minimal">
-        <strong>¡Bienvenido a TaskFlow!</strong>
-        <p>
-          Gestiona tus tareas recurrentes fácilmente.
-          <br />
-          <span className="intro-user">
-            Accedes como <b>{user.email}</b>
-          </span>
-        </p>
-      </section>
-
-      <form
-        onSubmit={handleAddOrEditTask}
-        className="task-form dense"
-        autoComplete="off"
-      >
-        <input
-          type="text"
-          value={desc}
-          onChange={(e) => setDesc(e.target.value)}
-          required
-          placeholder="¿Qué tienes que hacer?"
-          className="input"
-          autoFocus
-        />
-        <div className="form-row">
-          <input
-            type="text"
-            value={duration}
-            onChange={(e) => setDuration(e.target.value)}
-            placeholder="Duración (ej: 30m, 2h, 1d, 1w)"
-            required
-            className="input"
-          />
-          <input
-            type="text"
-            value={period}
-            onChange={(e) => setPeriod(e.target.value)}
-            placeholder="Periodicidad (ej: 30m, 2h, 1d, 1w)"
-            required
-            className="input"
-          />
-        </div>
-        <div className="form-row">
-          <select
-            value={importance}
-            onChange={(e) => setImportance(e.target.value)}
-            required
-            className="input"
-          >
-            {IMPORTANCE_LEVELS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-          <div className="form-actions">
-            <button type="submit" className="btn main-btn">
-              {editId ? "Guardar" : "Añadir"}
+      <div className="fixed-header">
+        <header className="header-bar header-bar-2row">
+          <div className="header-row header-row-top">
+            <div className="logo">
+              <span role="img" aria-label="tarea">
+                📋
+              </span>{" "}
+              TaskFlow
+            </div>
+            <button
+              className="mode-toggle"
+              onClick={() => setDarkMode((m) => !m)}
+              aria-label="Cambiar modo claro/oscuro"
+              title={darkMode ? "Modo claro" : "Modo oscuro"}
+            >
+              {darkMode ? "🌙" : "🌞"}
             </button>
-            {editId && (
-              <button type="button" className="btn" onClick={resetForm}>
-                Cancelar
-              </button>
-            )}
           </div>
-        </div>
-        {error && <div className="error-msg">{error}</div>}
-      </form>
+          <div className="header-row header-row-bottom">
+            <span className="user-email">{user.email}</span>
+            <button
+              className="btn logout-btn"
+              title="Cerrar sesión"
+              onClick={handleLogout}
+            >
+              Salir
+            </button>
+          </div>
+        </header>
 
-      <nav className="state-nav">
-        {STATES.map((s) => (
-          <button
-            key={s.value}
-            className={`state-btn${stateFilter === s.value ? " active" : ""}`}
-            onClick={() => setStateFilter(s.value)}
-          >
-            {s.label}
-          </button>
-        ))}
-      </nav>
+        <form
+          onSubmit={handleAddOrEditTask}
+          className="task-form dense"
+          autoComplete="off"
+        >
+          <input
+            type="text"
+            value={desc}
+            onChange={(e) => setDesc(e.target.value)}
+            required
+            placeholder="¿Qué tienes que hacer?"
+            className="input"
+            autoFocus
+          />
+          <div className="form-row">
+            <input
+              type="text"
+              value={duration}
+              onChange={(e) => setDuration(e.target.value)}
+              placeholder="Duración (ej: 30m, 2h, 1d, 1w)"
+              required
+              className="input"
+            />
+            <input
+              type="text"
+              value={period}
+              onChange={(e) => setPeriod(e.target.value)}
+              placeholder="Periodicidad (ej: 30m, 2h, 1d, 1w)"
+              required
+              className="input"
+            />
+          </div>
+          <div className="form-row">
+            <select
+              value={importance}
+              onChange={(e) => setImportance(e.target.value)}
+              required
+              className="input"
+            >
+              {IMPORTANCE_LEVELS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+            <div className="form-actions">
+              <button type="submit" className="btn main-btn">
+                {editId ? "Guardar" : "Añadir"}
+              </button>
+              {editId && (
+                <button type="button" className="btn" onClick={resetForm}>
+                  Cancelar
+                </button>
+              )}
+            </div>
+          </div>
+          {error && <div className="error-msg">{error}</div>}
+        </form>
 
-      <section className="task-list">
-        <h2 className="section-title">
-          {STATES.find((s) => s.value === stateFilter)?.label ?? ""}
-        </h2>
-        <ul className="task-ul">
-          {getSortedTasks(stateFilter).length === 0 ? (
-            <li className="empty-state">No hay tareas en este estado</li>
-          ) : (
-            getSortedTasks(stateFilter).map((task) => {
-              const importanceObj = getImportanceObj(task.importance);
-              const msLeft = getMsToNextPending(task);
-              const isDragged = draggedId === task.id;
-              const extraClass = [
-                isDragged ? "swiping" : "",
-                swipeClass[task.id] || "",
-              ]
-                .filter(Boolean)
-                .join(" ");
+        <nav className="state-nav">
+          {STATES.map((s) => (
+            <button
+              key={s.value}
+              className={`state-btn${stateFilter === s.value ? " active" : ""}`}
+              onClick={() => setStateFilter(s.value)}
+            >
+              {s.label}
+            </button>
+          ))}
+        </nav>
+      </div>
+      <div className="scrollable-task-list">
+        <section className="task-list">
+          <h2 className="section-title">
+            {STATES.find((s) => s.value === stateFilter)?.label ?? ""}
+          </h2>
+          <ul className="task-ul">
+            {getSortedTasks(stateFilter).length === 0 ? (
+              <li className="empty-state">No hay tareas en este estado</li>
+            ) : (
+              getSortedTasks(stateFilter).map((task) => {
+                const importanceObj = getImportanceObj(task.importance);
+                const msLeft = getMsToNextPending(task);
+                const isDragged = draggedId === task.id;
+                const extraClass = [
+                  isDragged ? "swiping" : "",
+                  swipeClass[task.id] || "",
+                ]
+                  .filter(Boolean)
+                  .join(" ");
 
-              return (
-                <li
-                  className={`task-li imp-${task.importance} ${extraClass}`}
-                  key={task.id}
-                  style={{
-                    borderLeftColor: importanceObj.color,
-                    background: `var(--bg-imp-${task.importance})`,
-                    touchAction: "pan-y",
-                    transform:
-                      isDragged && draggedDelta !== 0
-                        ? `translateX(${draggedDelta}px)`
-                        : undefined,
-                  }}
-                  onTouchStart={e => handleDragStart(e, task.id)}
-                  onTouchMove={handleDragMove}
-                  onTouchEnd={e => handleDragEnd(e, task, stateFilter === "pendiente")}
-                  onMouseDown={e => handleDragStart(e, task.id)}
-                  onMouseMove={e => isDragged && handleDragMove(e)}
-                  onMouseUp={e => handleDragEnd(e, task, stateFilter === "pendiente")}
-                >
-                  {/* Indicador swipe a la derecha */}
-                  <div
-                    className="swipe-label swipe-label-right"
+                return (
+                  <li
+                    className={`task-li imp-${task.importance} ${extraClass}`}
+                    key={task.id}
                     style={{
-                      opacity:
-                        isDragged && draggedDelta > 0
-                          ? Math.min(draggedDelta / SWIPE_THRESHOLD, 1)
-                          : 0.3,
+                      borderLeftColor: importanceObj.color,
+                      background: `var(--bg-imp-${task.importance})`,
+                      touchAction: "pan-y",
+                      transform:
+                        isDragged && draggedDelta !== 0
+                          ? `translateX(${draggedDelta}px)`
+                          : undefined,
                     }}
+                    onTouchStart={e => handleDragStart(e, task.id)}
+                    onTouchMove={handleDragMove}
+                    onTouchEnd={e => handleDragEnd(e, task, stateFilter === "pendiente")}
+                    onMouseDown={e => handleDragStart(e, task.id)}
+                    onMouseMove={e => isDragged && handleDragMove(e)}
+                    onMouseUp={e => handleDragEnd(e, task, stateFilter === "pendiente")}
                   >
-                    {rightLabel(stateFilter)}
-                  </div>
-
-                  <div className="li-main">
-                    <span
-                      className="li-imp-dot"
-                      style={{ background: importanceObj.color }}
-                      title={`Importancia: ${importanceObj.label}`}
-                    ></span>
-                    <span className="li-title">{task.desc}</span>
-                  </div>
-                  <div className="li-details">
-                    <span className="li-attr">
-                      {ICONS.duracion} {humanizeDuration(task.duration)}
-                    </span>
-                    <span className="li-attr">
-                      {ICONS.periodicidad} {humanizeDuration(task.period)}
-                    </span>
-                    {task.state === "aldia" && (
-                      <span
-                        className={`li-attr ${msLeft <= 0 ? "expired" : ""}`}
-                      >
-                        {ICONS.tiempo} {getHumanTimeLeft(msLeft)}
-                      </span>
-                    )}
-                  </div>
-                  <div className="li-actions">
-                    <button
-                      className="actbtn iconbtn"
-                      title="Editar"
-                      onClick={() => handleEdit(task.id)}
+                    {/* Indicador swipe a la derecha */}
+                    <div
+                      className="swipe-label swipe-label-right"
+                      style={{
+                        opacity:
+                          isDragged && draggedDelta > 0
+                            ? Math.min(draggedDelta / SWIPE_THRESHOLD, 1)
+                            : 0.3,
+                      }}
                     >
-                      <svg
-                        viewBox="0 0 20 20"
-                        width="16"
-                        height="16"
-                        fill="currentColor"
-                      >
-                        <path d="M2.5 14.81V17.5h2.69l8.09-8.09-2.69-2.69L2.5 14.81zm14.71-8.04a1 1 0 0 0 0-1.42l-2.36-2.36a1 1 0 0 0-1.42 0l-1.83 1.83 3.78 3.78 1.83-1.83z" />
-                      </svg>
-                    </button>
-                  </div>
-                </li>
-              );
-            })
-          )}
-        </ul>
-      </section>
+                      {rightLabel(stateFilter)}
+                    </div>
 
+                    <div className="li-main">
+                      <span
+                        className="li-imp-dot"
+                        style={{ background: importanceObj.color }}
+                        title={`Importancia: ${importanceObj.label}`}
+                      ></span>
+                      <span className="li-title">{task.desc}</span>
+                    </div>
+                    <div className="li-details">
+                      <span className="li-attr">
+                        {ICONS.duracion} {humanizeDuration(task.duration)}
+                      </span>
+                      <span className="li-attr">
+                        {ICONS.periodicidad} {humanizeDuration(task.period)}
+                      </span>
+                      {task.state === "aldia" && (
+                        <span
+                          className={`li-attr ${msLeft <= 0 ? "expired" : ""}`}
+                        >
+                          {ICONS.tiempo} {getHumanTimeLeft(msLeft)}
+                        </span>
+                      )}
+                    </div>
+                    <div className="li-actions">
+                      <button
+                        className="actbtn iconbtn"
+                        title="Editar"
+                        onClick={() => handleEdit(task.id)}
+                      >
+                        <svg
+                          viewBox="0 0 20 20"
+                          width="16"
+                          height="16"
+                          fill="currentColor"
+                        >
+                          <path d="M2.5 14.81V17.5h2.69l8.09-8.09-2.69-2.69L2.5 14.81zm14.71-8.04a1 1 0 0 0 0-1.42l-2.36-2.36a1 1 0 0 0-1.42 0l-1.83 1.83 3.78 3.78 1.83-1.83z" />
+                        </svg>
+                      </button>
+                    </div>
+                  </li>
+                );
+              })
+            )}
+          </ul>
+        </section>
+      </div>
       {/* Confirmación de borrado al hacer swipe izquierda */}
       {pendingDelete && (
         <div className="confirm-modal-backdrop">
@@ -681,12 +672,6 @@ function App() {
           </div>
         </div>
       )}
-
-      <footer className="footer">
-        <span>
-          Hecho con <span role="img" aria-label="corazón">💜</span> por Jontalas
-        </span>
-      </footer>
     </div>
   );
 }
