@@ -60,28 +60,71 @@ body {
   background: #23272c;
 }
 
+/* HEADER 2 FILAS */
 .header-bar {
   width: 100%;
   background: var(--header-bg);
   color: var(--header-fg);
-  padding: 0.5em 1.2em;
   border-radius: 12px 12px 0 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  min-height: 50px;
+  box-sizing: border-box;
+  padding: 0;
+  max-width: 100%;
+}
+
+.header-bar-2row {
+  padding: 0 !important;
+  gap: 0;
+}
+
+.header-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 50px;
+  width: 100%;
   box-sizing: border-box;
-  max-width: 100%;
+  min-height: 38px;
+  padding: 0.5em 1.2em;
+}
+
+.header-row-top {
+  border-radius: 12px 12px 0 0;
+  border-bottom: 1px solid #20304011;
+  font-size: 1.09em;
+  font-weight: 500;
+  background: inherit;
+}
+.header-row-bottom {
+  border-radius: 0 0 0 0;
+  font-size: 0.99em;
+  background: inherit;
+  padding-top: 0.2em;
+  padding-bottom: 0.4em;
 }
 
 @media (max-width: 600px) {
   .header-bar {
     border-radius: 0;
-    padding: 0.7em 0.8em;
     min-height: 44px;
   }
+  .header-row {
+    border-radius: 0;
+    padding: 0.46em 0.8em;
+    font-size: 1em;
+    min-height: 33px;
+  }
+  .header-row-top {
+    font-size: 1em;
+  }
+  .header-row-bottom {
+    font-size: 0.96em;
+  }
   .logo {
-    font-size: 1.07em;
+    font-size: 1.06em;
     gap: 6px;
   }
   .user-email {

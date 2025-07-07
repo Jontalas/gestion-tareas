@@ -456,14 +456,14 @@ function App() {
       <Helmet>
         <title>TaskFlow</title>
       </Helmet>
-      <header className="header-bar">
-        <h1 className="logo">
-          <span role="img" aria-label="tarea">
-            📋
-          </span>{" "}
-          TaskFlow
-        </h1>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <header className="header-bar header-bar-2row">
+        <div className="header-row header-row-top">
+          <div className="logo">
+            <span role="img" aria-label="tarea">
+              📋
+            </span>{" "}
+            TaskFlow
+          </div>
           <button
             className="mode-toggle"
             onClick={() => setDarkMode((m) => !m)}
@@ -472,6 +472,8 @@ function App() {
           >
             {darkMode ? "🌙" : "🌞"}
           </button>
+        </div>
+        <div className="header-row header-row-bottom">
           <span className="user-email">{user.email}</span>
           <button
             className="btn logout-btn"
