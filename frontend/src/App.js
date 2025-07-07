@@ -64,7 +64,6 @@ function getMsToNextPending(task) {
     return task.lastDone + periodMin * 60 * 1000 - msNow;
   }
 }
-
 function getHumanTimeLeft(msLeft) {
   if (msLeft <= 0) return "¡Pendiente!";
   const sec = Math.round(msLeft / 1000);
@@ -80,7 +79,6 @@ function getHumanTimeLeft(msLeft) {
   const years = Math.floor(days / 365);
   return years === 1 ? "1 año" : `${years} años`;
 }
-
 function getImportanceObj(val) {
   return IMPORTANCE_LEVELS.find((l) => l.value === val) || IMPORTANCE_LEVELS[1];
 }
@@ -131,19 +129,35 @@ function App() {
     setEmailVerificationSent(false);
     try {
       if (isRegister) {
+        // REGISTRO NUEVO: Obligatorio confirmar email
         const cred = await createUserWithEmailAndPassword(auth, loginEmail, loginPass);
         await sendEmailVerification(cred.user);
         setEmailVerificationSent(true);
         setLoginError("Debes confirmar tu correo antes de acceder. Revisa tu bandeja de entrada.");
-        signOut(auth); // Para evitar acceso sin verificar
+        signOut(auth);
       } else {
+        // LOGIN
         const cred = await signInWithEmailAndPassword(auth, loginEmail, loginPass);
-        if (!cred.user.emailVerified) {
-          await sendEmailVerification(cred.user);
-          setLoginError("Debes confirmar tu correo antes de acceder. Se ha reenviado el correo de verificación.");
-          setEmailVerificationSent(true);
-          signOut(auth);
-        }
+        const dbKey = getUserDbKey(cred.user.email);
+        const userRef = ref(db, `tasks/${dbKey}`);
+        onValue(
+          userRef,
+          (snapshot) => {
+            if (snapshot.exists()) {
+              // Usuario antiguo: dejar pasar aunque no esté verificado
+              setUser(cred.user);
+            } else if (!cred.user.emailVerified) {
+              // Usuario nuevo: requiere verificación
+              setLoginError("Debes confirmar tu correo antes de acceder. Revisa tu bandeja de entrada.");
+              setEmailVerificationSent(true);
+              signOut(auth);
+            } else {
+              // Usuario nuevo y verificado
+              setUser(cred.user);
+            }
+          },
+          { onlyOnce: true }
+        );
       }
     } catch (err) {
       setLoginError(
