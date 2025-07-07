@@ -1,34 +1,51 @@
 :root {
+  /* Colores que deben cambiar entre claro/oscuro */
+  --main-bg: #fff;
+  --main-fg: #222;
+  --header-bg: #212c36;
+  --header-fg: #fff;
+  --form-bg: #f8f8f8;
+  --form-fg: #222;
+
+  /* Colores de las tareas: NO CAMBIAN NUNCA */
   --bg-imp-alta: #ffeaea;
   --bg-imp-media: #fffbe6;
   --bg-imp-baja: #eaffea;
   --color-pendiente: #e74c3c;
   --color-aldia: #2ecc71;
-  --header-bg: #212c36;
+}
+
+[data-theme="dark"] {
+  --main-bg: #181b1e;
+  --main-fg: #eee;
+  --header-bg: #161c21;
   --header-fg: #fff;
+  --form-bg: #23272c;
+  --form-fg: #eee;
+
+  /* Las tareas NO CAMBIAN en oscuro */
+  --bg-imp-alta: #ffeaea;
+  --bg-imp-media: #fffbe6;
+  --bg-imp-baja: #eaffea;
+  --color-pendiente: #e74c3c;
+  --color-aldia: #2ecc71;
 }
 
 body,
 html {
-  background: #fff;
-  color: #222;
+  background: var(--main-bg);
+  color: var(--main-fg);
   min-height: 100vh;
   margin: 0;
   font-family: system-ui, Arial, sans-serif;
   overflow-x: hidden;
 }
 
-[data-theme="dark"] body,
-[data-theme="dark"] html {
-  background: #181b1e;
-  color: #eee;
-}
-
 .main-container {
   max-width: 560px;
   margin: 24px auto 0 auto;
-  background: #fff;
-  color: #222;
+  background: var(--main-bg);
+  color: var(--main-fg);
   border-radius: 12px;
   box-shadow: 0 3px 18px #0002;
   min-height: 90vh;
@@ -39,10 +56,6 @@ html {
   flex-direction: column;
   height: 100vh;
   overflow: hidden;
-}
-[data-theme="dark"] .main-container {
-  background: #23272c;
-  color: #eee;
 }
 
 @media (max-width: 600px) {
@@ -78,10 +91,6 @@ html {
   box-sizing: border-box;
   padding: 0;
   max-width: 100%;
-}
-[data-theme="dark"] .header-bar {
-  background: #161c21;
-  color: #fff;
 }
 
 .header-bar-2row {
@@ -174,17 +183,13 @@ html {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  background: #f8f8f8;
+  background: var(--form-bg);
   border-radius: 8px;
   padding: 1.2em 1em 1em 1em;
   box-shadow: 0 2px 8px #0001;
   width: 100%;
   box-sizing: border-box;
-  color: #222;
-}
-[data-theme="dark"] .task-form {
-  background: #23282c;
-  color: #eee;
+  color: var(--form-fg);
 }
 .task-form.dense {
   margin-bottom: 1em;
