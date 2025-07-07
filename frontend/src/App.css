@@ -33,7 +33,15 @@ body {
   box-shadow: 0 3px 18px #0002;
   min-height: 90vh;
   padding-bottom: 48px;
+  /* Ensure children do not overflow */
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
 }
+
 [data-theme="dark"] .main-container {
   background: #23272c;
 }
@@ -48,7 +56,11 @@ body {
   align-items: center;
   justify-content: space-between;
   min-height: 50px;
+  box-sizing: border-box;
+  /* Make sure header doesn't overflow main container */
+  max-width: 100%;
 }
+
 .logo {
   font-size: 1.25em;
   display: flex;
@@ -76,6 +88,8 @@ body {
   padding: 1.2em;
   margin: 1.2em 0 1.8em 0;
   box-shadow: 0 2px 8px #0001;
+  width: 100%;
+  box-sizing: border-box;
 }
 [data-theme="dark"] .intro-card {
   background: #21282f;
@@ -95,6 +109,8 @@ body {
   border-radius: 8px;
   padding: 1.2em 1em 1em 1em;
   box-shadow: 0 2px 8px #0001;
+  width: 100%;
+  box-sizing: border-box;
 }
 [data-theme="dark"] .task-form {
   background: #23282c;
@@ -113,6 +129,7 @@ body {
   width: 100%;
   margin-bottom: 2px;
   background: #fff;
+  box-sizing: border-box;
 }
 [data-theme="dark"] .input, [data-theme="dark"] select.input {
   background: #23272c;
@@ -139,6 +156,7 @@ body {
   letter-spacing: 0.01em;
   font-size: 1em;
   transition: background 0.18s;
+  box-sizing: border-box;
 }
 [data-theme="dark"] .btn {
   background: #32383d;
@@ -162,6 +180,8 @@ body {
   gap: 9px;
   margin: 0.6em 0 1em 0;
   justify-content: center;
+  width: 100%;
+  box-sizing: border-box;
 }
 .state-btn {
   border: none;
@@ -172,6 +192,7 @@ body {
   font-weight: 500;
   font-size: 1em;
   cursor: pointer;
+  box-sizing: border-box;
 }
 [data-theme="dark"] .state-btn {
   background: #30363b;
@@ -184,6 +205,8 @@ body {
 
 .task-list {
   margin: 0 0 1.5em 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 .section-title {
   margin: 0 0 0.7em 0;
@@ -199,6 +222,8 @@ body {
   list-style: none;
   padding: 0;
   margin: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .task-li {
@@ -215,6 +240,8 @@ body {
   user-select: none;
   position: relative;
   transition: background 0.2s, box-shadow 0.2s, transform 0.15s;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .task-li.imp-alta {
@@ -325,10 +352,6 @@ body {
 }
 
 .footer {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  width: 100vw;
   background: #fff;
   color: #888;
   text-align: center;
@@ -336,6 +359,10 @@ body {
   font-size: 0.98em;
   box-shadow: 0 -2px 12px #0002;
   z-index: 5;
+  border-radius: 0 0 12px 12px;
+  width: 100%;
+  box-sizing: border-box;
+  position: relative;
 }
 [data-theme="dark"] .footer {
   background: #23272c;
